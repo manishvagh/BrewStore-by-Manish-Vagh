@@ -55,8 +55,21 @@ export interface BrewProgress {
 
 export type ThemePreference = "system" | "light" | "dark";
 
+export interface BrewStatus {
+  installed: boolean;
+  brewPath?: string;
+  version?: string;
+  code?: string;
+  installCommand: string;
+  brewSite: string;
+}
+
 export interface BrewStoreApi {
   getBrewInfo: () => Promise<{ brewPath: string; version: string }>;
+  getBrewStatus: () => Promise<BrewStatus>;
+  recheckBrew: () => Promise<BrewStatus>;
+  openBrewInstaller: () => Promise<{ ok: boolean }>;
+  writeClipboardText: (text: string) => Promise<{ ok: boolean }>;
   loadCatalog: (opts?: { force?: boolean }) => Promise<CatalogPayload>;
   getInstalled: () => Promise<InstalledMap>;
   getOutdated: () => Promise<OutdatedMap>;

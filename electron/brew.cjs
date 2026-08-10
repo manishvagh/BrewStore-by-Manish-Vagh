@@ -16,7 +16,11 @@ const CASK_API = "https://formulae.brew.sh/api/cask.json";
 const FORMULA_API = "https://formulae.brew.sh/api/formula.json";
 const CATALOG_TTL_MS = 1000 * 60 * 60 * 12;
 
-async function resolveBrew() {
+const BREW_INSTALL_SCRIPT =
+  '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"';
+const BREW_SITE = "https://brew.sh";
+
+async function findBrewPath() {
   for (const candidate of BREW_CANDIDATES) {
     try {
       if (candidate === "brew") {
@@ -24,12 +28,64 @@ async function resolveBrew() {
         return "brew";
       }
       await fs.access(candidate);
+      // Confirm the binary actually runs (stale path / broken install).
+      await execFileAsync(candidate, ["--version"]);
       return candidate;
     } catch {
       continue;
     }
   }
-  throw new Error("Homebrew not found. Install from https://brew.sh");
+  return null;
+}
+
+async function resolveBrew() {
+  const brewPath = await findBrewPath();
+  if (!brewPath) {
+    const err = new Error("Homebrew is not installed");
+    err.code = "BREW_NOT_FOUND";
+    throw err;
+  }
+  return brewPath;
+}
+
+async function probeBrew() {
+  const brewPath = await findBrewPath();
+  if (!brewPath) {
+    return {
+      installed: false,
+      code: "BREW_NOT_FOUND",
+      installCommand: BREW_INSTALL_SCRIPT,
+      brewSite: BREW_SITE,
+    };
+  }
+  try {
+    const { stdout } = await runBrew(brewPath, ["--version"]);
+    return {
+      installed: true,
+      brewPath,
+      version: stdout.trim().split("\n")[0] || "Homebrew",
+      installCommand: BREW_INSTALL_SCRIPT,
+      brewSite: BREW_SITE,
+    };
+  } catch {
+    return {
+      installed: false,
+      code: "BREW_NOT_FOUND",
+      installCommand: BREW_INSTALL_SCRIPT,
+      brewSite: BREW_SITE,
+    };
+  }
+}
+
+async function openBrewInstallerInTerminal() {
+  const escaped = BREW_INSTALL_SCRIPT.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  await execFileAsync("osascript", [
+    "-e",
+    `tell application "Terminal" to do script "${escaped}"`,
+    "-e",
+    'tell application "Terminal" to activate',
+  ]);
+  return { ok: true };
 }
 
 function runBrew(brewPath, args, { onData } = {}) {
@@ -293,16 +349,25 @@ async function upgradeAll(brewPath, onData) {
 }
 
 async function getBrewInfo() {
-  const brewPath = await resolveBrew();
-  const { stdout } = await runBrew(brewPath, ["--version"]);
+  const status = await probeBrew();
+  if (!status.installed) {
+    const err = new Error("Homebrew is not installed");
+    err.code = "BREW_NOT_FOUND";
+    throw err;
+  }
   return {
-    brewPath,
-    version: stdout.trim().split("\n")[0] || "Homebrew",
+    brewPath: status.brewPath,
+    version: status.version,
   };
 }
 
 module.exports = {
   resolveBrew,
+  findBrewPath,
+  probeBrew,
+  openBrewInstallerInTerminal,
+  BREW_INSTALL_SCRIPT,
+  BREW_SITE,
   loadCatalog,
   getInstalled,
   getOutdated,

@@ -26,6 +26,7 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 | **Live Activity** | Sidebar shows real `brew` output as commands run |
 | **Fast catalog + Refresh** | Cached Homebrew API data for quick launch; refresh when you want fresh |
 | **Still your Homebrew** | Uses local `brew` — Terminal still works; no account required; free & open source |
+| **Homebrew setup help** | If brew isn’t installed, BrewStore walks you through the official install |
 | **Light, dark, or system** | Appearance follows macOS by default, or lock Light / Dark |
 
 ---
@@ -70,6 +71,7 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 - Updates badge, per-package progress, and live Activity log
 - Package icons (local `.app` when installed, remote fallbacks)
 - Catalog cache with Refresh catalog
+- Onboarding when Homebrew isn’t installed (official installer via Terminal)
 - Appearance: System, Light, or Dark (persisted)
 - Credits and attribution for Homebrew and package owners
 - Free, open source, no account
