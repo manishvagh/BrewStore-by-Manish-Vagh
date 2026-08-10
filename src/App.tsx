@@ -9,7 +9,13 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { CATEGORIES, getCategory, packageKey, withCategories } from "./categories";
-import type { BrewPackage, BrewStatus, InstalledMap, OutdatedMap } from "./types";
+import type {
+  BrewPackage,
+  BrewStatus,
+  InstalledMap,
+  OutdatedMap,
+  TrendingPayload,
+} from "./types";
 import { DiscoverView } from "./components/DiscoverView";
 import { CategoriesView } from "./components/CategoriesView";
 import { CategoryDetail } from "./components/CategoryDetail";
@@ -21,6 +27,16 @@ import { ActionLog } from "./components/ActionLog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { BrewOnboarding } from "./components/BrewOnboarding";
 import { useTheme } from "./hooks/useTheme";
+import { COLLECTIONS, resolveCollection } from "./discovery/collections";
+import { recommendForYou } from "./discovery/recommend";
+import { findSimilarPackages } from "./discovery/similar";
+import {
+  DEFAULT_SEARCH_FILTERS,
+  SEARCH_FILTER_OPTIONS,
+  searchPackages,
+  type SearchFilters,
+} from "./discovery/search";
+import { resolveTrending } from "./discovery/trending";
 import "./App.css";
 
 type NavId = "discover" | "categories" | "installed" | "updates" | "credits";
@@ -53,6 +69,9 @@ function App() {
   const [brewSetupLog, setBrewSetupLog] = useState<string[]>([]);
   const [brewCheckError, setBrewCheckError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
+  const [trendingData, setTrendingData] = useState<TrendingPayload | null>(null);
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [selected, setSelected] = useState<BrewPackage | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -103,6 +122,10 @@ function App() {
           setPackages(withCategories(catalog.packages));
         });
         await refreshStatus();
+        void api
+          .loadTrending({ force })
+          .then((trending) => setTrendingData(trending))
+          .catch(() => setTrendingData(null));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (/homebrew is not installed|brew_not_found|homebrew not found/i.test(message)) {
@@ -176,15 +199,32 @@ function App() {
   }, [packages, installed, outdated]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return enriched;
-    return enriched.filter(
-      (pkg) =>
-        pkg.name.toLowerCase().includes(q) ||
-        pkg.token.toLowerCase().includes(q) ||
-        pkg.desc.toLowerCase().includes(q),
-    );
-  }, [enriched, query]);
+    return searchPackages(enriched, query, searchFilters);
+  }, [enriched, query, searchFilters]);
+
+  const forYou = useMemo(() => recommendForYou(enriched, 12), [enriched]);
+
+  const trendingPackages = useMemo(
+    () => resolveTrending(enriched, trendingData, 16),
+    [enriched, trendingData],
+  );
+
+  const collectionRows = useMemo(
+    () =>
+      COLLECTIONS.map((collection) => ({
+        collection,
+        packages: resolveCollection(collection, enriched),
+      })).filter((row) => row.packages.length > 0),
+    [enriched],
+  );
+
+  const similarForSelected = useMemo(() => {
+    if (!selected) return [];
+    const current =
+      enriched.find((p) => p.id === selected.id && p.type === selected.type) ||
+      selected;
+    return findSimilarPackages(current, enriched, 6);
+  }, [selected, enriched]);
 
   const installedPackages = useMemo(
     () => enriched.filter((pkg) => pkg.installed),
@@ -367,14 +407,21 @@ function App() {
       return (
         <DiscoverView
           featured={featured}
+          forYou={forYou}
+          trending={trendingPackages}
+          collections={collectionRows}
+          activeCollectionId={activeCollectionId}
           packages={filtered}
           query={query}
+          filtering={Object.values(searchFilters).some(Boolean)}
           onOpen={openPackage}
           onAction={runAction}
           onOpenCategory={(id) => {
             setNav("categories");
             setActiveCategory(id);
+            setActiveCollectionId(null);
           }}
+          onOpenCollection={setActiveCollectionId}
           busyId={busyId}
         />
       );
@@ -460,6 +507,7 @@ function App() {
               onClick={() => {
                 setNav(id);
                 setActiveCategory(null);
+                setActiveCollectionId(null);
                 setSelected(null);
               }}
             >
@@ -497,11 +545,36 @@ function App() {
               <Search size={16} />
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActiveCollectionId(null);
+                }}
                 placeholder="Search apps & formulae"
                 aria-label="Search"
               />
             </div>
+            {(nav === "discover" ||
+              query.trim() ||
+              Object.values(searchFilters).some(Boolean)) && (
+              <div className="search-filters" role="group" aria-label="Search filters">
+                {SEARCH_FILTER_OPTIONS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`filter-chip ${searchFilters[id] ? "active" : ""}`}
+                    aria-pressed={searchFilters[id]}
+                    onClick={() =>
+                      setSearchFilters((prev) => ({
+                        ...prev,
+                        [id]: !prev[id],
+                      }))
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -516,10 +589,12 @@ function App() {
             enriched.find((p) => p.id === selected.id && p.type === selected.type) ||
             selected
           }
+          similar={similarForSelected}
           busy={busyId === selected.id || updatingIds.has(packageKey(selected))}
           onClose={() => setSelected(null)}
           onAction={runAction}
           onOpenExternal={(url) => void api?.openExternal(url)}
+          onOpenPackage={(pkg) => setSelected(pkg)}
         />
       )}
     </div>

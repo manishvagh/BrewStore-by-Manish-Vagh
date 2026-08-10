@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("brewStore", {
   installHomebrew: () => ipcRenderer.invoke("brew:install-homebrew"),
   writeClipboardText: (text) => ipcRenderer.invoke("clipboard:write-text", text),
   loadCatalog: (opts) => ipcRenderer.invoke("catalog:load", opts),
+  loadTrending: (opts) => ipcRenderer.invoke("trending:load", opts),
   getInstalled: () => ipcRenderer.invoke("brew:installed"),
   getOutdated: () => ipcRenderer.invoke("brew:outdated"),
   install: (pkg) => ipcRenderer.invoke("brew:install", pkg),
