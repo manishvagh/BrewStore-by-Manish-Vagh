@@ -58,6 +58,11 @@ Review outdated packages and update individually or all at once.
 
 ![Updates view](docs/screenshots/updates.png)
 
+### Maintain
+Manage taps, Homebrew services (start / stop / restart), cleanup, doctor, and Brewfile export/import.
+
+![Maintain view](docs/screenshots/maintain.png)
+
 ### Credits
 Attribution for BrewStore, Homebrew, and the authors of every package you install.
 
@@ -175,7 +180,8 @@ xattr -cr /Applications/BrewStore.app
 2. **Categories** — explore by App Store–style groups  
 3. **Installed** — packages on this Mac; details, update, or uninstall  
 4. **Updates** — outdated packages; Update or Update All  
-5. **Credits** — author and third-party attribution  
+5. **Maintain** — taps, services, cleanup, doctor, and Brewfile tools  
+6. **Credits** — author and third-party attribution  
 
 The sidebar **Activity** panel shows live `brew` output. Use **Refresh catalog** to force a fresh download of the Homebrew formulae/cask index (otherwise cached for 12 hours).
 
