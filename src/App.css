@@ -920,9 +920,12 @@ input {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: grid;
-  justify-content: end;
-  z-index: 40;
+  place-items: center;
+  padding: 1.5rem;
+  z-index: 1000;
   animation: fade 180ms ease;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 @keyframes fade {
@@ -935,23 +938,37 @@ input {
 }
 
 .drawer {
-  width: min(420px, 100%);
-  height: 100%;
+  width: min(440px, calc(100vw - 2.5rem));
+  max-height: min(88dvh, 760px);
+  height: auto;
   background: var(--drawer-bg);
-  padding: 1.4rem;
+  padding: 1.25rem 1.4rem 1.4rem;
   overflow: auto;
-  border-radius: 24px 0 0 24px;
-  border-left: 1px solid var(--glass-border);
-  animation: slide 240ms ease;
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  animation: modal-rise 240ms ease;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
-@keyframes slide {
+@keyframes modal-rise {
   from {
-    transform: translateX(24px);
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
   }
   to {
+    opacity: 1;
     transform: none;
   }
+}
+
+.drawer-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: 0.35rem;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 .drawer-close {
@@ -964,8 +981,15 @@ input {
   place-items: center;
   cursor: pointer;
   color: var(--ink);
-  margin-inline-start: auto;
-  margin-block-end: 0.8rem;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.drawer-close:hover {
+  background: var(--nav-hover);
 }
 
 .drawer-hero {

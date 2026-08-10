@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ExternalLink, X } from "lucide-react";
 import type { BrewPackage } from "../types";
 import { getCategory } from "../categories";
@@ -15,17 +16,48 @@ export function PackageDetail({ pkg, busy, onClose, onAction, onOpenExternal }: 
   const category = pkg.category ? getCategory(pkg.category) : undefined;
   const sourceUrl = pkg.urls.head || pkg.urls.stable || pkg.homepage;
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="drawer-backdrop" onClick={onClose}>
-      <aside className="drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal>
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close">
-          <X size={18} />
-        </button>
+    <div
+      className="drawer-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <aside
+        className="drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="package-detail-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="drawer-toolbar">
+          <button
+            type="button"
+            className="drawer-close"
+            aria-label="Close"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onClose();
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
 
         <div className="drawer-hero">
           <PackageIcon pkg={pkg} size="lg" />
           <div>
-            <h2>{pkg.name}</h2>
+            <h2 id="package-detail-title">{pkg.name}</h2>
             <p className="drawer-desc">{pkg.desc || "No description available."}</p>
           </div>
         </div>
