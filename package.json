@@ -3,7 +3,7 @@
   "productName": "BrewStore",
   "version": "1.1.1",
   "description": "App Store–style desktop GUI for Homebrew on macOS.",
-  "author": "Manish Vagh",
+  "author": "Manish Vagh <manishvagh26@gmail.com>",
   "license": "MIT",
   "main": "electron/main.cjs",
   "type": "module",
@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build",
     "start": "cross-env ELECTRON_RUN_AS_NODE= electron .",
     "dist": "npm run build && cross-env ELECTRON_RUN_AS_NODE= electron-builder --mac dir",
+    "dist:dmg": "npm run build && cross-env ELECTRON_RUN_AS_NODE= electron-builder --mac dmg",
     "install:mac": "node scripts/install-mac.cjs",
     "preview": "vite preview",
     "lint": "oxlint"
@@ -31,12 +32,30 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
-        "dir"
+        "dir",
+        "dmg"
       ],
       "icon": "build/icon.icns",
       "identity": null,
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "artifactName": "BrewStore-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "BrewStore ${version}",
+      "icon": "build/icon.icns",
+      "contents": [
+        {
+          "x": 160,
+          "y": 200
+        },
+        {
+          "x": 400,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "afterPack": "scripts/afterPack.cjs"
   },

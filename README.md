@@ -11,6 +11,17 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 
 ---
 
+## Download
+
+**Latest release (macOS DMG):**  
+[Download BrewStore for Mac](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest)
+
+Or open [Releases](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases) and grab the `.dmg` for your Mac (Apple Silicon or Intel).
+
+After install, if macOS Gatekeeper blocks the app, see [First launch / Gatekeeper](#first-launch--gatekeeper) below.
+
+---
+
 ## Why BrewStore?
 
 | Advantage | What you get |
@@ -126,6 +137,14 @@ This starts the Vite dev server and opens the Electron window. Use this while ha
 
 ## Install as a macOS app
 
+### Option A — Download the DMG (recommended)
+
+1. Get the latest build from [GitHub Releases](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest)
+2. Open the `.dmg`, drag **BrewStore** into **Applications**
+3. Launch from Launchpad, Spotlight, or Applications
+
+### Option B — Build from source
+
 Build a packaged `.app`, install it into `/Applications`, and ensure Homebrew is present (installs Homebrew during this step if needed — macOS may ask for your password):
 
 ```bash
@@ -141,11 +160,13 @@ Then open **BrewStore** from Launchpad, Spotlight, or Applications.
 
 ```bash
 npm install
-npm run dist
-open release/mac-arm64/BrewStore.app
+npm run dist:dmg
+open release/BrewStore-*-arm64.dmg
 ```
 
-On Intel Macs the output folder may be `release/mac` instead of `release/mac-arm64`.
+`npm run dist` builds the `.app` only; `npm run dist:dmg` also produces the distributable disk image.
+
+On Intel Macs the artifact arch may be `x64` instead of `arm64`.
 
 ### First launch / Gatekeeper
 
@@ -168,6 +189,7 @@ xattr -cr /Applications/BrewStore.app
 | `npm run dev` | Development mode (Vite + Electron) |
 | `npm run build` | Typecheck and build the renderer |
 | `npm run dist` | Build renderer and package the macOS `.app` |
+| `npm run dist:dmg` | Build renderer and package a macOS `.dmg` for distribution |
 | `npm run install:mac` | Package, install into `/Applications`, set up Homebrew if missing |
 | `npm start` | Run Electron against the built `dist/` folder |
 | `npm run lint` | Run Oxlint |
