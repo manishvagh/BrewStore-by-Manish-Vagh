@@ -13,3 +13,5 @@ build/icon.iconset/
 *.tsbuildinfo
 
 /website/
+
+.cursor/
