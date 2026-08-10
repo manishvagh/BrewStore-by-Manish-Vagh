@@ -26,7 +26,7 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 | **Live Activity** | Sidebar shows real `brew` output as commands run |
 | **Fast catalog + Refresh** | Cached Homebrew API data for quick launch; refresh when you want fresh |
 | **Still your Homebrew** | Uses local `brew` — Terminal still works; no account required; free & open source |
-| **Homebrew setup help** | If brew isn’t installed, BrewStore walks you through the official install |
+| **Homebrew setup help** | If brew isn’t installed, BrewStore finishes setup in-app (password dialog — no Terminal) |
 | **Light, dark, or system** | Appearance follows macOS by default, or lock Light / Dark |
 
 ---
@@ -71,7 +71,7 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 - Updates badge, per-package progress, and live Activity log
 - Package icons (local `.app` when installed, remote fallbacks)
 - Catalog cache with Refresh catalog
-- Onboarding when Homebrew isn’t installed (official installer via Terminal)
+- Onboarding when Homebrew isn’t installed (in-app setup with macOS password dialog)
 - Appearance: System, Light, or Dark (persisted)
 - Credits and attribution for Homebrew and package owners
 - Free, open source, no account
@@ -109,7 +109,7 @@ This starts the Vite dev server and opens the Electron window. Use this while ha
 
 ## Install as a macOS app
 
-Build a packaged `.app` and copy it into `/Applications`:
+Build a packaged `.app`, install it into `/Applications`, and ensure Homebrew is present (installs Homebrew during this step if needed — macOS may ask for your password):
 
 ```bash
 git clone https://github.com/manishvagh/BrewStore-by-Manish-Vagh.git
@@ -151,7 +151,7 @@ xattr -cr /Applications/BrewStore.app
 | `npm run dev` | Development mode (Vite + Electron) |
 | `npm run build` | Typecheck and build the renderer |
 | `npm run dist` | Build renderer and package the macOS `.app` |
-| `npm run install:mac` | Package and install into `/Applications` |
+| `npm run install:mac` | Package, install into `/Applications`, set up Homebrew if missing |
 | `npm start` | Run Electron against the built `dist/` folder |
 | `npm run lint` | Run Oxlint |
 

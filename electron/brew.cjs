@@ -88,6 +88,105 @@ async function openBrewInstallerInTerminal() {
   return { ok: true };
 }
 
+async function writeAskPassHelper(dir) {
+  const askPassPath = path.join(dir, "brewstore-askpass");
+  const sudoShimPath = path.join(dir, "sudo");
+  const askPassScript = `#!/bin/bash
+osascript <<'APPLESCRIPT'
+set answer to display dialog "BrewStore needs your Mac password to finish setup and install Homebrew." with title "BrewStore Setup" default answer "" with hidden answer with icon caution buttons {"Cancel", "OK"} default button "OK"
+if button returned of answer is "Cancel" then error number -128
+return text returned of answer
+APPLESCRIPT
+`;
+  const sudoShim = `#!/bin/bash
+exec /usr/bin/sudo -A "$@"
+`;
+  await fs.writeFile(askPassPath, askPassScript, { mode: 0o700 });
+  await fs.writeFile(sudoShimPath, sudoShim, { mode: 0o700 });
+  return { askPassPath, sudoShimPath, binDir: dir };
+}
+
+let homebrewInstallInFlight = null;
+
+async function installHomebrew(onData) {
+  if (homebrewInstallInFlight) {
+    return homebrewInstallInFlight;
+  }
+
+  homebrewInstallInFlight = (async () => {
+    const existing = await findBrewPath();
+    if (existing) {
+      onData?.("Homebrew is already installed.\n");
+      return { ok: true, alreadyInstalled: true };
+    }
+
+    const tmpDir = await fs.mkdtemp(
+      path.join(require("node:os").tmpdir(), "brewstore-setup-"),
+    );
+    const { askPassPath, binDir } = await writeAskPassHelper(tmpDir);
+
+    onData?.("Setting up Homebrew…\n");
+    onData?.("macOS may ask for your password.\n");
+
+    try {
+      await new Promise((resolve, reject) => {
+        const child = spawn(
+          "/bin/bash",
+          [
+            "-c",
+            "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash",
+          ],
+          {
+            env: {
+              ...process.env,
+              PATH: `${binDir}:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`,
+              SUDO_ASKPASS: askPassPath,
+              NONINTERACTIVE: "1",
+              CI: "1",
+              HOMEBREW_NO_ANALYTICS: "1",
+              HOMEBREW_NO_AUTO_UPDATE: "1",
+              HOMEBREW_COLOR: "0",
+            },
+          },
+        );
+
+        child.stdout.on("data", (chunk) => onData?.(chunk.toString()));
+        child.stderr.on("data", (chunk) => onData?.(chunk.toString()));
+        child.on("error", reject);
+        child.on("close", (code) => {
+          if (code === 0) {
+            resolve();
+            return;
+          }
+          reject(
+            new Error(
+              code === 1
+                ? "Homebrew setup didn’t finish. Check the log, then try again."
+                : `Homebrew setup exited with code ${code}`,
+            ),
+          );
+        });
+      });
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    }
+
+    const brewPath = await findBrewPath();
+    if (!brewPath) {
+      throw new Error(
+        "Homebrew finished but brew was not found yet. Quit BrewStore and open it again.",
+      );
+    }
+
+    onData?.("Homebrew is ready.\n");
+    return { ok: true, brewPath };
+  })().finally(() => {
+    homebrewInstallInFlight = null;
+  });
+
+  return homebrewInstallInFlight;
+}
+
 function runBrew(brewPath, args, { onData } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(brewPath, args, {
@@ -365,6 +464,7 @@ module.exports = {
   resolveBrew,
   findBrewPath,
   probeBrew,
+  installHomebrew,
   openBrewInstallerInTerminal,
   BREW_INSTALL_SCRIPT,
   BREW_SITE,

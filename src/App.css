@@ -982,31 +982,48 @@ input {
   font-size: 0.9rem;
 }
 
-.onboarding-command {
+.onboarding-status {
   display: grid;
-  grid-template-columns: 1fr auto;
   gap: 0.55rem;
-  align-items: start;
-  padding: 0.75rem 0.8rem;
+}
+
+.onboarding-busy {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.onboarding-log {
+  margin: 0;
+  max-height: min(28dvh, 240px);
+  overflow: auto;
+  padding: 0.75rem 0.85rem;
   border-radius: 14px;
   background: color-mix(in srgb, var(--text) 6%, transparent);
   border: 1px solid var(--glass-border);
-}
-
-.onboarding-command code {
+  color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.45;
-  word-break: break-all;
-  color: var(--text);
-  opacity: 0.88;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.onboarding-copy {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  white-space: nowrap;
-  padding-block: 0.35rem;
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.onboarding-command {
+  display: none;
 }
 
 .onboarding-site {
