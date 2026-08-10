@@ -6,6 +6,10 @@ interface Props {
   onOpenExternal: (url: string) => void;
 }
 
+const OFFICIAL_REPO =
+  "https://github.com/manishvagh/BrewStore-by-Manish-Vagh";
+const OFFICIAL_SITE = "https://manishvagh.in/";
+
 export function CreditsView({ brewVersion, counts, onOpenExternal }: Props) {
   return (
     <section className="page credits">
@@ -21,6 +25,46 @@ export function CreditsView({ brewVersion, counts, onOpenExternal }: Props) {
           GUI for discovering and managing Homebrew packages. It is not
           affiliated with Apple or the App Store.
         </p>
+        <p className="muted">
+          Official product by Manish Vagh — not a third-party rebrand.
+        </p>
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() => onOpenExternal(OFFICIAL_SITE)}
+        >
+          manishvagh.in <ExternalLink size={14} />
+        </button>
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() => onOpenExternal(OFFICIAL_REPO)}
+        >
+          Official GitHub repository <ExternalLink size={14} />
+        </button>
+      </div>
+
+      <div className="credit-panel">
+        <h2>Name &amp; trademark</h2>
+        <p>
+          The software is open source under the MIT License. The{" "}
+          <strong>BrewStore</strong> name and attribution to{" "}
+          <strong>Manish Vagh</strong> identify the official product.
+        </p>
+        <p>
+          Modified or redistributed builds must not claim to be the official
+          BrewStore. Forks should use a different product name and may state
+          that they are based on BrewStore by Manish Vagh.
+        </p>
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() =>
+            onOpenExternal(`${OFFICIAL_REPO}/blob/main/TRADEMARKS.md`)
+          }
+        >
+          Trademark guidelines <ExternalLink size={14} />
+        </button>
       </div>
 
       <div className="credit-panel">
