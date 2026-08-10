@@ -1346,23 +1346,30 @@ input {
   }
 }
 
-.maintain-view {
+.page.maintain {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 1rem;
   max-inline-size: 52rem;
+}
+
+.page.maintain .page-header {
+  margin-block-end: 0;
 }
 
 .maintain-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
 }
 
 .maintain-tab {
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
-  color: var(--text);
+  background: color-mix(in srgb, var(--chip-bg) 90%, transparent);
+  color: var(--ink);
   border-radius: 999px;
   padding: 0.4rem 0.85rem;
   font: inherit;
@@ -1378,39 +1385,67 @@ input {
 }
 
 .maintain-panel {
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+  padding: 1.15rem 1.25rem;
   border-radius: 18px;
-  padding: 1.1rem 1.2rem;
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .maintain-panel h2 {
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-family: var(--display);
   font-size: 1.2rem;
 }
 
+.maintain-lead,
 .maintain-lede {
-  margin: 0 0 1rem;
+  margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+  line-height: 1.45;
 }
 
-.maintain-row {
+.maintain-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.maintain-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  margin-block-end: 0.85rem;
 }
 
-.maintain-row input {
-  flex: 1 1 12rem;
+.maintain-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.maintain-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin: 0;
+}
+
+.maintain-row input,
+.maintain-input {
+  flex: 1 1 auto;
   min-inline-size: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--bg);
-  color: var(--text);
+  background: color-mix(in srgb, var(--body-bg) 35%, transparent);
+  color: var(--ink);
   padding: 0.55rem 0.75rem;
   font: inherit;
 }
@@ -1419,6 +1454,7 @@ input {
   list-style: none;
   margin: 0;
   padding: 0;
+  padding-inline-start: 0;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
@@ -1429,9 +1465,18 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.55rem 0.65rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  background: color-mix(in srgb, var(--body-bg) 40%, transparent);
+}
+
+.maintain-list li > div:first-child {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-inline-size: 0;
 }
 
 .maintain-list code {
@@ -1439,16 +1484,17 @@ input {
 }
 
 .maintain-status {
-  margin: 0 0 0.75rem;
+  margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
 }
 
-.maintain-pre {
-  margin: 0.75rem 0 0;
+.maintain-pre,
+.maintain-log {
+  margin: 0;
   padding: 0.85rem;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  background: color-mix(in srgb, var(--body-bg) 45%, transparent);
   overflow: auto;
   max-block-size: 22rem;
   font-size: 0.8rem;
@@ -1458,6 +1504,30 @@ input {
 .maintain-muted {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.doctor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.doctor-list li {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--body-bg) 40%, transparent);
+}
+
+.doctor-list li p {
+  margin: 0;
+  line-height: 1.45;
 }
 
 .deps-block {
