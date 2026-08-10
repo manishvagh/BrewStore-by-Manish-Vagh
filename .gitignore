@@ -11,3 +11,6 @@ npm-debug.log*
 !.vscode/extensions.json
 build/icon.iconset/
 *.tsbuildinfo
+
+# Local marketing site hosted on manishvagh.in — never commit or push
+/website/
