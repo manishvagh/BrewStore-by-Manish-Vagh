@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("brewStore", {
   upgradeAll: () => ipcRenderer.invoke("brew:upgrade-all"),
   openExternal: (url) => ipcRenderer.invoke("shell:open-external", url),
   resolveIcons: (packages) => ipcRenderer.invoke("icons:resolve", packages),
+  setTheme: (preference) => ipcRenderer.invoke("theme:set", preference),
   onProgress: (callback) => {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on("brew:progress", listener);

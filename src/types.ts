@@ -53,6 +53,8 @@ export interface BrewProgress {
   text: string;
 }
 
+export type ThemePreference = "system" | "light" | "dark";
+
 export interface BrewStoreApi {
   getBrewInfo: () => Promise<{ brewPath: string; version: string }>;
   loadCatalog: (opts?: { force?: boolean }) => Promise<CatalogPayload>;
@@ -66,6 +68,9 @@ export interface BrewStoreApi {
   resolveIcons: (
     packages: Array<Pick<BrewPackage, "id" | "type" | "name" | "token" | "homepage" | "appNames">>,
   ) => Promise<Record<string, string | null>>;
+  setTheme: (
+    preference: ThemePreference,
+  ) => Promise<{ ok: boolean; shouldUseDarkColors: boolean }>;
   onProgress: (callback: (data: BrewProgress) => void) => () => void;
 }
 
