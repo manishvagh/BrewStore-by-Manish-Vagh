@@ -35,6 +35,11 @@ After install, if macOS Gatekeeper blocks the app, see [First launch / Gatekeepe
 | **Smarter search** | Filters for cask/formula, installed, GUI, open source — plus synonyms |
 | **Maintain toolkit** | Taps, services, cleanup, doctor, Brewfile export/import |
 | **Safer uninstalls** | See dependents before removal; pin formulae to skip upgrades |
+| **Install queue** | Queue several installs and let them run one after another |
+| **Open & copy** | Launch installed casks; copy `brew install …` for Terminal |
+| **Disk usage** | See how much each installed package uses on disk |
+| **Command palette** | ⌘K for search/actions; `/` focuses search |
+| **App updates** | Check GitHub Releases for newer BrewStore builds |
 | **Details before you install** | Version, type, tap, license, plus homepage / formula / source links |
 | **Real app icons** | Local `.app` icons when installed, with remote fallbacks — feels like a store |
 | **Full lifecycle** | Install, update, uninstall, and Update All from the UI |
@@ -97,6 +102,11 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 - Updates badge, per-package progress, and live Activity log
 - Maintain tools: taps, services, cleanup, doctor, Brewfile export/import
 - Pin formulae, dependency lists, and uninstall warnings when others need a package
+- Install queue for multiple packages
+- Open installed casks; copy brew install commands
+- Disk usage on the Installed view
+- ⌘K command palette and keyboard shortcuts
+- Check for BrewStore updates via GitHub Releases
 - Package icons (local `.app` when installed, remote fallbacks)
 - Catalog cache with Refresh catalog
 - Onboarding when Homebrew isn’t installed (in-app setup with macOS password dialog)

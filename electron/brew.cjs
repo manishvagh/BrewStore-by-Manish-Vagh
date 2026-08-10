@@ -782,6 +782,160 @@ async function getBrewInfo() {
   };
 }
 
+async function getPackageDiskUsage(brewPath, { id, type }) {
+  try {
+    const flag = type === "cask" ? "--caskroom" : "--cellar";
+    const { stdout: rootOut } = await runBrew(brewPath, [flag]);
+    const root = path.join(String(rootOut || "").trim(), id);
+    try {
+      await fs.access(root);
+    } catch {
+      return { id, type, bytes: 0, path: root, missing: true };
+    }
+    const { stdout } = await execFileAsync("/usr/bin/du", ["-sk", root], {
+      maxBuffer: 1024 * 1024,
+    });
+    const kb = Number.parseInt(String(stdout).trim().split(/\s+/)[0], 10);
+    return {
+      id,
+      type,
+      bytes: Number.isFinite(kb) ? kb * 1024 : 0,
+      path: root,
+      missing: false,
+    };
+  } catch {
+    return { id, type, bytes: 0, path: null, missing: true };
+  }
+}
+
+async function getDiskUsageMap(brewPath, packages) {
+  const list = Array.isArray(packages) ? packages.slice(0, 200) : [];
+  const results = await Promise.all(
+    list.map((pkg) => getPackageDiskUsage(brewPath, pkg)),
+  );
+  const map = {};
+  for (const item of results) {
+    map[`${item.type}:${item.id}`] = item;
+  }
+  return map;
+}
+
+async function openInstalledCask(pkgInfo) {
+  const names = [];
+  if (Array.isArray(pkgInfo?.appNames)) {
+    for (const name of pkgInfo.appNames) {
+      if (typeof name === "string" && name.trim()) names.push(name.trim());
+    }
+  }
+  if (pkgInfo?.name && !names.includes(pkgInfo.name)) {
+    names.push(String(pkgInfo.name));
+  }
+  if (pkgInfo?.id && !names.includes(pkgInfo.id)) {
+    names.push(String(pkgInfo.id));
+  }
+
+  const errors = [];
+  for (const name of names) {
+    const candidates = name.endsWith(".app") ? [name] : [name, `${name}.app`];
+    for (const candidate of candidates) {
+      try {
+        await execFileAsync("/usr/bin/open", ["-a", candidate]);
+        return { ok: true, app: candidate };
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message : String(err));
+      }
+    }
+  }
+
+  // Fall back to Applications folder match
+  for (const name of names) {
+    const base = name.replace(/\.app$/i, "");
+    const appPath = `/Applications/${base}.app`;
+    try {
+      await fs.access(appPath);
+      await execFileAsync("/usr/bin/open", [appPath]);
+      return { ok: true, app: appPath };
+    } catch {
+      // continue
+    }
+  }
+
+  const err = new Error(
+    errors[0] || `Could not open app for ${pkgInfo?.id || "cask"}`,
+  );
+  throw err;
+}
+
+function compareSemver(a, b) {
+  const pa = String(a)
+    .replace(/^v/i, "")
+    .split(/[.+-]/)
+    .map((n) => Number.parseInt(n, 10) || 0);
+  const pb = String(b)
+    .replace(/^v/i, "")
+    .split(/[.+-]/)
+    .map((n) => Number.parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i += 1) {
+    const da = pa[i] || 0;
+    const db = pb[i] || 0;
+    if (da > db) return 1;
+    if (da < db) return -1;
+  }
+  return 0;
+}
+
+async function checkAppUpdate(currentVersion) {
+  const url =
+    "https://api.github.com/repos/manishvagh/BrewStore-by-Manish-Vagh/releases/latest";
+  const raw = await new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      {
+        headers: {
+          "User-Agent": "BrewStore",
+          Accept: "application/vnd.github+json",
+        },
+        timeout: 12000,
+      },
+      (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`GitHub releases HTTP ${res.statusCode}`));
+          res.resume();
+          return;
+        }
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      },
+    );
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("GitHub releases request timed out"));
+    });
+  });
+
+  const data = JSON.parse(raw || "{}");
+  const latest = String(data.tag_name || data.name || "").replace(/^v/i, "");
+  const current = String(currentVersion || "0.0.0").replace(/^v/i, "");
+  const assets = Array.isArray(data.assets) ? data.assets : [];
+  const dmg =
+    assets.find((a) => /\.dmg$/i.test(a.name || "")) ||
+    assets.find((a) => /arm64.*\.dmg/i.test(a.name || "")) ||
+    null;
+
+  return {
+    updateAvailable: Boolean(latest) && compareSemver(latest, current) > 0,
+    currentVersion: current,
+    latestVersion: latest || current,
+    releaseUrl: data.html_url || "https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest",
+    downloadUrl: dmg?.browser_download_url || null,
+    notes: typeof data.body === "string" ? data.body.slice(0, 2000) : "",
+    publishedAt: data.published_at || null,
+  };
+}
+
 module.exports = {
   resolveBrew,
   findBrewPath,
@@ -813,4 +967,8 @@ module.exports = {
   bundleDump,
   bundleInstall,
   getBrewInfo,
+  getPackageDiskUsage,
+  getDiskUsageMap,
+  openInstalledCask,
+  checkAppUpdate,
 };

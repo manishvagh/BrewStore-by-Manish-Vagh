@@ -1,9 +1,16 @@
 import { ExternalLink } from "lucide-react";
+import { UpdateBanner } from "./UpdateBanner";
+import type { AppUpdateInfo } from "../types";
 
 interface Props {
   appVersion: string;
   brewVersion: string;
   counts: { casks: number; formulae: number; total: number };
+  appUpdate: AppUpdateInfo | null;
+  checkingUpdate: boolean;
+  onCheckUpdate: () => void;
+  onDownloadUpdate: (update: AppUpdateInfo) => void;
+  onDismissUpdate: () => void;
   onOpenExternal: (url: string) => void;
 }
 
@@ -15,6 +22,11 @@ export function CreditsView({
   appVersion,
   brewVersion,
   counts,
+  appUpdate,
+  checkingUpdate,
+  onCheckUpdate,
+  onDownloadUpdate,
+  onDismissUpdate,
   onOpenExternal,
 }: Props) {
   return (
@@ -32,6 +44,13 @@ export function CreditsView({
           affiliated with Apple or the App Store.
         </p>
         <p className="muted">Version {appVersion}</p>
+        <UpdateBanner
+          update={appUpdate}
+          checking={checkingUpdate}
+          onCheck={onCheckUpdate}
+          onDownload={onDownloadUpdate}
+          onDismiss={onDismissUpdate}
+        />
         <p className="muted">
           Official product by Manish Vagh — not a third-party rebrand.
         </p>

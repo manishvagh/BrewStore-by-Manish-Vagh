@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("brewStore", {
   recheckBrew: () => ipcRenderer.invoke("brew:recheck"),
   installHomebrew: () => ipcRenderer.invoke("brew:install-homebrew"),
   getAppVersion: () => ipcRenderer.invoke("app:get-version"),
+  checkForUpdate: () => ipcRenderer.invoke("app:check-update"),
   writeClipboardText: (text) => ipcRenderer.invoke("clipboard:write-text", text),
   loadCatalog: (opts) => ipcRenderer.invoke("catalog:load", opts),
   loadTrending: (opts) => ipcRenderer.invoke("trending:load", opts),
@@ -15,6 +16,7 @@ contextBridge.exposeInMainWorld("brewStore", {
   uninstall: (pkg) => ipcRenderer.invoke("brew:uninstall", pkg),
   upgrade: (pkg) => ipcRenderer.invoke("brew:upgrade", pkg),
   upgradeAll: () => ipcRenderer.invoke("brew:upgrade-all"),
+  getDiskUsage: (packages) => ipcRenderer.invoke("brew:disk-usage", packages),
   listTaps: () => ipcRenderer.invoke("brew:taps"),
   addTap: (name) => ipcRenderer.invoke("brew:tap-add", name),
   removeTap: (name) => ipcRenderer.invoke("brew:tap-remove", name),
@@ -31,6 +33,7 @@ contextBridge.exposeInMainWorld("brewStore", {
   bundleExport: () => ipcRenderer.invoke("brew:bundle-export"),
   bundleImport: () => ipcRenderer.invoke("brew:bundle-import"),
   openExternal: (url) => ipcRenderer.invoke("shell:open-external", url),
+  openInstalledApp: (pkg) => ipcRenderer.invoke("shell:open-app", pkg),
   resolveIcons: (packages) => ipcRenderer.invoke("icons:resolve", packages),
   setTheme: (preference) => ipcRenderer.invoke("theme:set", preference),
   onProgress: (callback) => {
