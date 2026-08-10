@@ -145,15 +145,13 @@ function App() {
       "google-chrome",
       "slack",
       "spotify",
-      "docker",
       "iterm2",
       "rectangle",
       "obsidian",
-      "vlc",
-      "notion",
-      "figma",
     ];
-    const byToken = new Map(enriched.filter((p) => p.type === "cask").map((p) => [p.token, p]));
+    const byToken = new Map(
+      enriched.filter((p) => p.type === "cask").map((p) => [p.token, p]),
+    );
     return picks.map((t) => byToken.get(t)).filter(Boolean) as BrewPackage[];
   }, [enriched]);
 
