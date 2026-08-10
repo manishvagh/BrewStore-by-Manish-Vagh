@@ -749,13 +749,14 @@ input {
 
 .package-card {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.8rem;
   align-items: center;
   padding: 0.95rem;
   border-radius: var(--radius);
   cursor: pointer;
   transition: transform 180ms ease, box-shadow 180ms ease;
+  min-inline-size: 0;
 }
 
 .package-card:hover {
@@ -804,10 +805,17 @@ input {
   font-size: 1.2rem;
 }
 
+.pkg-meta {
+  min-inline-size: 0;
+}
+
 .pkg-meta h3 {
   margin: 0;
   font-size: 1rem;
   letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pkg-meta p {
@@ -824,6 +832,20 @@ input {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
+}
+
+.pkg-actions {
+  align-self: center;
+  justify-self: end;
+  flex-shrink: 0;
+}
+
+.pkg-action-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .tag {
@@ -1577,13 +1599,6 @@ input {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--accent);
-}
-
-.pkg-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  justify-content: flex-end;
 }
 
 .package-card.queued {
