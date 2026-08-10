@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, nativeTheme } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, nativeTheme, clipboard } = require("electron");
 const path = require("node:path");
 const brew = require("./brew.cjs");
 const icons = require("./icons.cjs");
@@ -6,13 +6,22 @@ const icons = require("./icons.cjs");
 let mainWindow = null;
 let brewPathPromise = null;
 
+function resetBrewPathCache() {
+  brewPathPromise = null;
+}
+
 const WINDOW_BG = {
   light: "#e8eef5",
   dark: "#0d121c",
 };
 
 function getBrewPath() {
-  if (!brewPathPromise) brewPathPromise = brew.resolveBrew();
+  if (!brewPathPromise) {
+    brewPathPromise = brew.resolveBrew().catch((err) => {
+      brewPathPromise = null;
+      throw err;
+    });
+  }
   return brewPathPromise;
 }
 
@@ -98,6 +107,26 @@ app.on("window-all-closed", () => {
 });
 
 ipcMain.handle("brew:info", async () => brew.getBrewInfo());
+
+ipcMain.handle("brew:status", async () => brew.probeBrew());
+
+ipcMain.handle("brew:recheck", async () => {
+  resetBrewPathCache();
+  return brew.probeBrew();
+});
+
+ipcMain.handle("brew:open-installer", async () => {
+  await brew.openBrewInstallerInTerminal();
+  return { ok: true };
+});
+
+ipcMain.handle("clipboard:write-text", async (_event, text) => {
+  if (typeof text !== "string" || !text.trim()) {
+    return { ok: false };
+  }
+  clipboard.writeText(text);
+  return { ok: true };
+});
 
 ipcMain.handle("catalog:load", async (_event, { force = false } = {}) => {
   return brew.loadCatalog(app.getPath("userData"), { force });

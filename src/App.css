@@ -913,6 +913,116 @@ input {
   padding: 1.5rem;
 }
 
+.content-onboarding {
+  display: grid;
+  place-items: center;
+  padding-block: 1.5rem;
+}
+
+.onboarding {
+  width: min(560px, 100%);
+  margin-inline: auto;
+  animation: fade 220ms ease;
+}
+
+.onboarding-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.6rem 1.55rem 1.45rem;
+  text-align: start;
+  border-radius: 22px;
+}
+
+.onboarding-kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.onboarding-card h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.55rem, 2.4vw, 1.95rem);
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.onboarding-lead,
+.onboarding-steps {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.onboarding-steps {
+  padding-inline-start: 1.15rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-block-start: 0.25rem;
+}
+
+.onboarding-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.onboarding-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.onboarding-command {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  align-items: start;
+  padding: 0.75rem 0.8rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid var(--glass-border);
+}
+
+.onboarding-command code {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  word-break: break-all;
+  color: var(--text);
+  opacity: 0.88;
+}
+
+.onboarding-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  padding-block: 0.35rem;
+}
+
+.onboarding-site {
+  justify-self: start;
+}
+
+.nav-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ghost-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .drawer-backdrop {
   position: fixed;
   inset: 0;

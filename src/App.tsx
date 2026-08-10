@@ -9,7 +9,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { CATEGORIES, getCategory, packageKey, withCategories } from "./categories";
-import type { BrewPackage, InstalledMap, OutdatedMap } from "./types";
+import type { BrewPackage, BrewStatus, InstalledMap, OutdatedMap } from "./types";
 import { DiscoverView } from "./components/DiscoverView";
 import { CategoriesView } from "./components/CategoriesView";
 import { CategoryDetail } from "./components/CategoryDetail";
@@ -19,6 +19,7 @@ import { CreditsView } from "./components/CreditsView";
 import { UpdatesView } from "./components/UpdatesView";
 import { ActionLog } from "./components/ActionLog";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { BrewOnboarding } from "./components/BrewOnboarding";
 import { useTheme } from "./hooks/useTheme";
 import "./App.css";
 
@@ -32,6 +33,12 @@ const NAV: { id: NavId; label: string; icon: typeof Compass }[] = [
   { id: "credits", label: "Credits", icon: Info },
 ];
 
+const FALLBACK_BREW_MISSING: Pick<BrewStatus, "installCommand" | "brewSite"> = {
+  installCommand:
+    '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+  brewSite: "https://brew.sh",
+};
+
 function App() {
   const { preference: themePreference, setPreference: setThemePreference } = useTheme();
   const [nav, setNav] = useState<NavId>("discover");
@@ -40,6 +47,12 @@ function App() {
   const [outdated, setOutdated] = useState<OutdatedMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [brewMissing, setBrewMissing] = useState<Pick<
+    BrewStatus,
+    "installCommand" | "brewSite"
+  > | null>(null);
+  const [checkingBrew, setCheckingBrew] = useState(false);
+  const [brewCheckError, setBrewCheckError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<BrewPackage | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -63,10 +76,25 @@ function App() {
     async (force = false) => {
       setLoading(true);
       setError(null);
+      setBrewCheckError(null);
       try {
         if (!api) {
           throw new Error("Open BrewStore from Applications (Electron required).");
         }
+
+        const status = await api.getBrewStatus();
+        if (!status.installed) {
+          setBrewMissing({
+            installCommand: status.installCommand || FALLBACK_BREW_MISSING.installCommand,
+            brewSite: status.brewSite || FALLBACK_BREW_MISSING.brewSite,
+          });
+          setPackages([]);
+          setInstalled({});
+          setOutdated({});
+          return;
+        }
+
+        setBrewMissing(null);
         const [info, catalog] = await Promise.all([
           api.getBrewInfo(),
           api.loadCatalog({ force }),
@@ -78,7 +106,12 @@ function App() {
         });
         await refreshStatus();
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        const message = err instanceof Error ? err.message : String(err);
+        if (/homebrew is not installed|brew_not_found|homebrew not found/i.test(message)) {
+          setBrewMissing(FALLBACK_BREW_MISSING);
+          return;
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -98,6 +131,31 @@ function App() {
       setLog((prev) => [...prev.slice(-100), text]);
     });
   }, [api]);
+
+  async function handleRecheckBrew() {
+    if (!api) return;
+    setCheckingBrew(true);
+    setBrewCheckError(null);
+    try {
+      const status = await api.recheckBrew();
+      if (!status.installed) {
+        setBrewMissing({
+          installCommand: status.installCommand || FALLBACK_BREW_MISSING.installCommand,
+          brewSite: status.brewSite || FALLBACK_BREW_MISSING.brewSite,
+        });
+        setBrewCheckError(
+          "Homebrew still isn’t available. Finish the Terminal install, then try again.",
+        );
+        return;
+      }
+      setBrewMissing(null);
+      await loadAll(true);
+    } catch (err) {
+      setBrewCheckError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCheckingBrew(false);
+    }
+  }
 
   const enriched = useMemo(() => {
     return packages.map((pkg) => {
@@ -252,8 +310,30 @@ function App() {
       return (
         <div className="state-panel glass-card">
           <div className="spinner" />
-          <p>Loading Homebrew catalog…</p>
+          <p>Loading BrewStore…</p>
         </div>
+      );
+    }
+
+    if (brewMissing) {
+      return (
+        <BrewOnboarding
+          info={brewMissing}
+          checking={checkingBrew}
+          checkError={brewCheckError}
+          onOpenInstaller={async () => {
+            if (!api) throw new Error("Electron required");
+            await api.openBrewInstaller();
+          }}
+          onCopyCommand={async () => {
+            if (!api) return;
+            await api.writeClipboardText(brewMissing.installCommand);
+          }}
+          onOpenSite={() => {
+            void api?.openExternal(brewMissing.brewSite);
+          }}
+          onRecheck={handleRecheckBrew}
+        />
       );
     }
 
@@ -377,6 +457,7 @@ function App() {
               key={id}
               type="button"
               className={`nav-item ${nav === id && !activeCategory ? "active" : ""}`}
+              disabled={Boolean(brewMissing)}
               onClick={() => {
                 setNav(id);
                 setActiveCategory(null);
@@ -398,6 +479,7 @@ function App() {
           <button
             type="button"
             className="ghost-btn"
+            disabled={Boolean(brewMissing) || loading}
             onClick={() => void loadAll(true)}
             title="Refresh catalog"
           >
@@ -410,19 +492,23 @@ function App() {
       </aside>
 
       <main className="main">
-        <div className="topbar">
-          <div className="search glass-pill">
-            <Search size={16} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search apps & formulae"
-              aria-label="Search"
-            />
+        {!brewMissing && (
+          <div className="topbar">
+            <div className="search glass-pill">
+              <Search size={16} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search apps & formulae"
+                aria-label="Search"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="content">{renderMain()}</div>
+        <div className={`content ${brewMissing ? "content-onboarding" : ""}`}>
+          {renderMain()}
+        </div>
       </main>
 
       {selected && (
