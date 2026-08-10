@@ -4,6 +4,7 @@ import { PackageIcon } from "./PackageIcon";
 interface Props {
   pkg: BrewPackage;
   featured?: boolean;
+  pinned?: boolean;
   busy: boolean;
   progressLabel?: string;
   onOpen: (pkg: BrewPackage) => void;
@@ -13,6 +14,7 @@ interface Props {
 export function PackageCard({
   pkg,
   featured,
+  pinned,
   busy,
   progressLabel,
   onOpen,
@@ -45,6 +47,7 @@ export function PackageCard({
           <span className="tag">{pkg.type}</span>
           {pkg.installed && !pkg.outdated && <span className="tag ok">Installed</span>}
           {pkg.outdated && <span className="tag soft">Update</span>}
+          {pinned && <span className="tag soft">Pinned</span>}
         </div>
       </div>
       <div className="pkg-actions" onClick={(e) => e.stopPropagation()}>

@@ -1,7 +1,7 @@
 {
   "name": "brewstore",
   "productName": "BrewStore",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "App Store–style desktop GUI for Homebrew on macOS.",
   "author": "Manish Vagh",
   "license": "MIT",

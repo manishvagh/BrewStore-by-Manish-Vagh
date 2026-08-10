@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, shell, nativeTheme, clipboard } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, nativeTheme, clipboard, dialog } = require("electron");
 const path = require("node:path");
 const brew = require("./brew.cjs");
 const icons = require("./icons.cjs");
+const pkg = require("../package.json");
 
 let mainWindow = null;
 let brewPathPromise = null;
@@ -180,6 +181,135 @@ ipcMain.handle("brew:upgrade-all", async () => {
     sendProgress("brew:progress", { action: "upgrade-all", text });
   });
   return { ok: true };
+});
+
+ipcMain.handle("app:get-version", async () => ({
+  version: app.getVersion() || pkg.version || "0.0.0",
+  name: pkg.productName || "BrewStore",
+}));
+
+ipcMain.handle("brew:taps", async () => {
+  const brewPath = await getBrewPath();
+  return brew.listTaps(brewPath);
+});
+
+ipcMain.handle("brew:tap-add", async (_event, name) => {
+  const brewPath = await getBrewPath();
+  await brew.addTap(brewPath, name, (text) => {
+    sendProgress("brew:progress", { action: "tap-add", text });
+  });
+  return brew.listTaps(brewPath);
+});
+
+ipcMain.handle("brew:tap-remove", async (_event, name) => {
+  const brewPath = await getBrewPath();
+  await brew.removeTap(brewPath, name, (text) => {
+    sendProgress("brew:progress", { action: "tap-remove", text });
+  });
+  return brew.listTaps(brewPath);
+});
+
+ipcMain.handle("brew:pinned", async () => {
+  const brewPath = await getBrewPath();
+  return brew.listPinned(brewPath);
+});
+
+ipcMain.handle("brew:pin", async (_event, pkgInfo) => {
+  const brewPath = await getBrewPath();
+  await brew.pinPackage(brewPath, pkgInfo, (text) => {
+    sendProgress("brew:progress", { action: "pin", id: pkgInfo.id, text });
+  });
+  return { ok: true, pinned: await brew.listPinned(brewPath) };
+});
+
+ipcMain.handle("brew:unpin", async (_event, pkgInfo) => {
+  const brewPath = await getBrewPath();
+  await brew.unpinPackage(brewPath, pkgInfo, (text) => {
+    sendProgress("brew:progress", { action: "unpin", id: pkgInfo.id, text });
+  });
+  return { ok: true, pinned: await brew.listPinned(brewPath) };
+});
+
+ipcMain.handle("brew:cleanup-dry-run", async () => {
+  const brewPath = await getBrewPath();
+  return brew.cleanupDryRun(brewPath, (text) => {
+    sendProgress("brew:progress", { action: "cleanup-dry-run", text });
+  });
+});
+
+ipcMain.handle("brew:cleanup", async () => {
+  const brewPath = await getBrewPath();
+  await brew.cleanup(brewPath, (text) => {
+    sendProgress("brew:progress", { action: "cleanup", text });
+  });
+  return { ok: true };
+});
+
+ipcMain.handle("brew:doctor", async () => {
+  const brewPath = await getBrewPath();
+  return brew.doctor(brewPath, (text) => {
+    sendProgress("brew:progress", { action: "doctor", text });
+  });
+});
+
+ipcMain.handle("brew:services", async () => {
+  const brewPath = await getBrewPath();
+  return brew.listServices(brewPath);
+});
+
+ipcMain.handle("brew:service-action", async (_event, payload) => {
+  const brewPath = await getBrewPath();
+  await brew.serviceAction(brewPath, payload, (text) => {
+    sendProgress("brew:progress", {
+      action: `service-${payload.action}`,
+      id: payload.name,
+      text,
+    });
+  });
+  return brew.listServices(brewPath);
+});
+
+ipcMain.handle("brew:deps", async (_event, pkgInfo) => {
+  const brewPath = await getBrewPath();
+  return brew.getDeps(brewPath, pkgInfo);
+});
+
+ipcMain.handle("brew:dependents", async (_event, pkgInfo) => {
+  const brewPath = await getBrewPath();
+  return brew.getDependents(brewPath, pkgInfo);
+});
+
+ipcMain.handle("brew:bundle-export", async () => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: "Export Brewfile",
+    defaultPath: "Brewfile",
+    filters: [{ name: "Brewfile", extensions: ["", "brewfile"] }],
+  });
+  if (result.canceled || !result.filePath) {
+    return { ok: false, canceled: true };
+  }
+  const brewPath = await getBrewPath();
+  await brew.bundleDump(brewPath, result.filePath, (text) => {
+    sendProgress("brew:progress", { action: "bundle-export", text });
+  });
+  return { ok: true, path: result.filePath };
+});
+
+ipcMain.handle("brew:bundle-import", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Import Brewfile",
+    properties: ["openFile"],
+    filters: [{ name: "Brewfile", extensions: ["", "brewfile", "rb"] }],
+  });
+  if (result.canceled || !result.filePaths?.[0]) {
+    return { ok: false, canceled: true };
+  }
+  const filePath = result.filePaths[0];
+  const brewPath = await getBrewPath();
+  await brew.bundleInstall(brewPath, filePath, (text) => {
+    sendProgress("brew:progress", { action: "bundle-import", text });
+  });
+  return { ok: true, path: filePath };
 });
 
 ipcMain.handle("shell:open-external", async (_event, url) => {
