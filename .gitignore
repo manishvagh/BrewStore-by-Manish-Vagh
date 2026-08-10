@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-ssr/
+release/
+*.local
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+build/icon.iconset/
+*.tsbuildinfo
