@@ -1,0 +1,11 @@
+---
+description: Never commit or push the manishvagh.in marketing site
+alwaysApply: true
+---
+
+# Marketing site is not in git
+
+- The BrewStore landing page lives in `/website/` locally and on **https://manishvagh.in/** (aaPanel).
+- **Never** `git add`, commit, or push `/website/` or its assets, HTML, CSS, or deploy scripts.
+- `/website/` is listed in `.gitignore` — keep it that way.
+- LeadLock is at **https://manishvagh.in/leadlock/**; do not overwrite it when deploying BrewStore.
