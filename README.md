@@ -8,6 +8,47 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 
 ---
 
+## Why BrewStore?
+
+| Advantage | What you get |
+|---|---|
+| **Visual instead of terminal-only** | Install, update, and remove packages without memorizing `brew` commands |
+| **App Store–style discovery** | Featured apps, categories, and search across thousands of casks & formulae |
+| **Updates at a glance** | Badge + Updates list with one-click Update or Update All |
+| **Live feedback** | Sidebar Activity panel shows real `brew` output as commands run |
+| **Clear ownership** | Credits and per-package links to homepage / formula / authors |
+
+---
+
+## Screenshots
+
+### Discover
+Browse featured GUI apps, jump into categories, and search the catalog.
+
+![Discover view](docs/screenshots/discover.png)
+
+### Categories
+Explore Homebrew like the App Store — Developer Tools, Utilities, Browsers, and more.
+
+![Categories view](docs/screenshots/categories.png)
+
+### Installed
+See everything on your Mac, open details, or update packages that need it.
+
+![Installed view](docs/screenshots/installed.png)
+
+### Updates
+Review outdated packages and update individually or all at once.
+
+![Updates view](docs/screenshots/updates.png)
+
+### Credits
+Attribution for BrewStore, Homebrew, and the authors of every package you install.
+
+![Credits view](docs/screenshots/credits.png)
+
+---
+
 ## Features
 
 - Browse and search Homebrew casks and formulae
@@ -117,6 +158,7 @@ The sidebar **Activity** panel shows live `brew` output. Use **Refresh catalog**
 BrewStore/
 ├── electron/          # Main process, brew bridge, icons
 ├── src/               # React UI
+├── docs/screenshots/  # README screenshots
 ├── scripts/           # electron-builder hooks
 ├── build/             # App icons (.icns / .png)
 ├── public/            # Static assets bundled into the renderer
