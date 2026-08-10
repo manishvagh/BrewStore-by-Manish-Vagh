@@ -508,12 +508,8 @@ input {
 
 .featured-row {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(260px, 300px);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 0.9rem;
-  overflow-x: auto;
-  padding-block-end: 0.4rem;
-  scroll-snap-type: x mandatory;
 }
 
 .package-grid {
@@ -530,7 +526,6 @@ input {
   padding: 0.95rem;
   border-radius: var(--radius);
   cursor: pointer;
-  scroll-snap-align: start;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
