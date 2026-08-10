@@ -1,2 +1,12 @@
 # These owners must approve PRs that change matching paths.
 * @manishvagh
+
+# Brand / identity — GitLab-style protection of official attribution
+/LICENSE @manishvagh
+/NOTICE @manishvagh
+/TRADEMARKS.md @manishvagh
+/README.md @manishvagh
+/CONTRIBUTING.md @manishvagh
+/package.json @manishvagh
+/src/components/CreditsView.tsx @manishvagh
+/build/ @manishvagh

@@ -2,7 +2,8 @@
 
 Native macOS desktop app for **discovering and managing** [Homebrew](https://brew.sh) packages — casks and formulae — with an App Store–style interface.
 
-**Author:** Manish Vagh
+**Author:** Manish Vagh  
+**Official site:** [manishvagh.in](https://manishvagh.in/) · **Source:** [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh)
 
 Homebrew’s catalog is huge. Nobody remembers every package — or even knows most of them exist. BrewStore shows the full index visually so you can browse, search, and stumble into tools you’d never type into Terminal.
 
@@ -199,6 +200,16 @@ Direct commits to `main` are not allowed. Open a pull request and wait for revie
 - **Packages** — all casks and formulae belong to their respective owners (open-source and proprietary). Open a package’s detail view for homepage, license, and formula links.
 
 BrewStore is not affiliated with Apple or the App Store.
+
+**Official sources only:** [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh) · [manishvagh.in](https://manishvagh.in/)
+
+---
+
+## Trademark
+
+The code is open source (MIT). The **BrewStore** name and **Manish Vagh** product attribution are not.
+
+Forks and modified builds are welcome under MIT, but must not pretend to be the official BrewStore. Rename your fork, keep the copyright notice, and say it is based on BrewStore by Manish Vagh. Full rules: [TRADEMARKS.md](./TRADEMARKS.md) · [NOTICE](./NOTICE).
 
 ---
 
