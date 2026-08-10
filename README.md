@@ -32,11 +32,6 @@ Explore Homebrew like the App Store — Developer Tools, Utilities, Browsers, an
 
 ![Categories view](docs/screenshots/categories.png)
 
-### Installed
-See everything on your Mac, open details, or update packages that need it.
-
-![Installed view](docs/screenshots/installed.png)
-
 ### Updates
 Review outdated packages and update individually or all at once.
 
