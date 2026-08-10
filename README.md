@@ -1,8 +1,10 @@
 # BrewStore
 
-Native macOS desktop app for browsing and managing [Homebrew](https://brew.sh) packages — casks and formulae — with an App Store–style interface.
+Native macOS desktop app for **discovering and managing** [Homebrew](https://brew.sh) packages — casks and formulae — with an App Store–style interface.
 
 **Author:** Manish Vagh
+
+Homebrew’s catalog is huge. Nobody remembers every package — or even knows most of them exist. BrewStore shows the full index visually so you can browse, search, and stumble into tools you’d never type into Terminal.
 
 BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does not claim ownership of any packaged software. Every app and library remains the property of its respective authors and maintainers.
 
@@ -12,12 +14,18 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 
 | Advantage | What you get |
 |---|---|
-| **Visual instead of terminal-only** | Install, update, and remove packages without memorizing `brew` commands |
-| **App Store–style discovery** | Featured apps, categories, and search across thousands of casks & formulae |
-| **Updates at a glance** | Badge + Updates list with one-click Update or Update All |
-| **Live feedback** | Sidebar Activity panel shows real `brew` output as commands run |
-| **Clear ownership** | Credits and per-package links to homepage / formula / authors |
-| **Light, dark, or system** | Appearance follows macOS by default, or lock Light / Dark in the sidebar |
+| **See everything Homebrew has** | Browse the full cask + formula catalog visually — find apps you didn’t know were available |
+| **Casks and formulae together** | GUI apps and CLI libraries in one place |
+| **Search the whole index** | Match on name, token, and description — not only packages you already remember |
+| **Explore by category** | Developer Tools, Browsers, Productivity, and more — discover by job, not by package ID |
+| **Details before you install** | Version, type, tap, license, plus homepage / formula / source links |
+| **Real app icons** | Local `.app` icons when installed, with remote fallbacks — feels like a store |
+| **Full lifecycle** | Install, update, uninstall, and Update All from the UI |
+| **Updates at a glance** | Badge + Updates list with progress and live feedback |
+| **Live Activity** | Sidebar shows real `brew` output as commands run |
+| **Fast catalog + Refresh** | Cached Homebrew API data for quick launch; refresh when you want fresh |
+| **Still your Homebrew** | Uses local `brew` — Terminal still works; no account required; free & open source |
+| **Light, dark, or system** | Appearance follows macOS by default, or lock Light / Dark |
 
 ---
 
@@ -52,14 +60,18 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 
 ## Features
 
-- Browse and search Homebrew casks and formulae
-- Category-based discovery (Developer Tools, Productivity, Browsers, and more)
-- Install, uninstall, and update packages
-- Updates view with per-package and Update All flows
-- Package icons (local `.app` icons when installed, with remote fallbacks)
-- Live activity log for brew output
+- Visual discovery of the full Homebrew catalog (casks + formulae)
+- Search across name, token, and description
+- Category-based browsing (Developer Tools, Productivity, Browsers, and more)
+- Featured apps on Discover for quick starts
+- Package detail view with homepage, formula, and source links
+- Install, uninstall, and update (including Update All)
+- Updates badge, per-package progress, and live Activity log
+- Package icons (local `.app` when installed, remote fallbacks)
+- Catalog cache with Refresh catalog
 - Appearance: System, Light, or Dark (persisted)
 - Credits and attribution for Homebrew and package owners
+- Free, open source, no account
 
 ---
 
@@ -144,9 +156,9 @@ xattr -cr /Applications/BrewStore.app
 
 ## Using the app
 
-1. **Discover** — featured apps, categories, and search  
-2. **Categories** — browse by App Store–style groups  
-3. **Installed** — packages currently on your Mac  
+1. **Discover** — browse the catalog, featured apps, and search  
+2. **Categories** — explore by App Store–style groups  
+3. **Installed** — packages on this Mac; details, update, or uninstall  
 4. **Updates** — outdated packages; Update or Update All  
 5. **Credits** — author and third-party attribution  
 
