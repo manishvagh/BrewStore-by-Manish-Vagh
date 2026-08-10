@@ -130,6 +130,12 @@ Homebrew is invoked through the local `brew` CLI. Catalog metadata is loaded fro
 
 ---
 
+## Contributing
+
+Direct commits to `main` are not allowed. Open a pull request and wait for review/approval from the repository owner. See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+---
+
 ## Credits
 
 - **BrewStore** — developed by Manish Vagh  
