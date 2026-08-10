@@ -17,6 +17,7 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 | **Updates at a glance** | Badge + Updates list with one-click Update or Update All |
 | **Live feedback** | Sidebar Activity panel shows real `brew` output as commands run |
 | **Clear ownership** | Credits and per-package links to homepage / formula / authors |
+| **Light, dark, or system** | Appearance follows macOS by default, or lock Light / Dark in the sidebar |
 
 ---
 
@@ -31,6 +32,11 @@ Browse featured GUI apps, jump into categories, and search the catalog.
 Explore Homebrew like the App Store — Developer Tools, Utilities, Browsers, and more.
 
 ![Categories view](docs/screenshots/categories.png)
+
+### Installed
+See what’s on this Mac, spot updates, and open package details.
+
+![Installed view](docs/screenshots/installed.png)
 
 ### Updates
 Review outdated packages and update individually or all at once.
@@ -52,6 +58,7 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 - Updates view with per-package and Update All flows
 - Package icons (local `.app` icons when installed, with remote fallbacks)
 - Live activity log for brew output
+- Appearance: System, Light, or Dark (persisted)
 - Credits and attribution for Homebrew and package owners
 
 ---
