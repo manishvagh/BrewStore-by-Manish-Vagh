@@ -22,6 +22,8 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 | **For you & collections** | Suggestions from your installs, plus curated lists like New Mac setup |
 | **Trending** | Popular Homebrew installs from public 30-day analytics |
 | **Smarter search** | Filters for cask/formula, installed, GUI, open source — plus synonyms |
+| **Maintain toolkit** | Taps, services, cleanup, doctor, Brewfile export/import |
+| **Safer uninstalls** | See dependents before removal; pin formulae to skip upgrades |
 | **Details before you install** | Version, type, tap, license, plus homepage / formula / source links |
 | **Real app icons** | Local `.app` icons when installed, with remote fallbacks — feels like a store |
 | **Full lifecycle** | Install, update, uninstall, and Update All from the UI |
@@ -77,6 +79,8 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 - Package detail view with homepage, formula, and source links
 - Install, uninstall, and update (including Update All)
 - Updates badge, per-package progress, and live Activity log
+- Maintain tools: taps, services, cleanup, doctor, Brewfile export/import
+- Pin formulae, dependency lists, and uninstall warnings when others need a package
 - Package icons (local `.app` when installed, remote fallbacks)
 - Catalog cache with Refresh catalog
 - Onboarding when Homebrew isn’t installed (in-app setup with macOS password dialog)

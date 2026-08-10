@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 
 interface Props {
+  appVersion: string;
   brewVersion: string;
   counts: { casks: number; formulae: number; total: number };
   onOpenExternal: (url: string) => void;
@@ -10,7 +11,12 @@ const OFFICIAL_REPO =
   "https://github.com/manishvagh/BrewStore-by-Manish-Vagh";
 const OFFICIAL_SITE = "https://manishvagh.in/";
 
-export function CreditsView({ brewVersion, counts, onOpenExternal }: Props) {
+export function CreditsView({
+  appVersion,
+  brewVersion,
+  counts,
+  onOpenExternal,
+}: Props) {
   return (
     <section className="page credits">
       <header className="page-header">
@@ -25,6 +31,7 @@ export function CreditsView({ brewVersion, counts, onOpenExternal }: Props) {
           GUI for discovering and managing Homebrew packages. It is not
           affiliated with Apple or the App Store.
         </p>
+        <p className="muted">Version {appVersion}</p>
         <p className="muted">
           Official product by Manish Vagh — not a third-party rebrand.
         </p>

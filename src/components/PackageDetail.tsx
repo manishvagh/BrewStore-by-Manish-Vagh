@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import type { BrewPackage } from "../types";
 import { getCategory } from "../categories";
@@ -7,24 +7,36 @@ import { PackageIcon } from "./PackageIcon";
 interface Props {
   pkg: BrewPackage;
   similar: BrewPackage[];
+  pinned: boolean;
   busy: boolean;
   onClose: () => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenExternal: (url: string) => void;
   onOpenPackage: (pkg: BrewPackage) => void;
+  onTogglePin?: (pkg: BrewPackage, pin: boolean) => Promise<void>;
+  loadDeps?: (pkg: BrewPackage) => Promise<string[]>;
+  loadDependents?: (pkg: BrewPackage) => Promise<string[]>;
 }
 
 export function PackageDetail({
   pkg,
   similar,
+  pinned,
   busy,
   onClose,
   onAction,
   onOpenExternal,
   onOpenPackage,
+  onTogglePin,
+  loadDeps,
+  loadDependents,
 }: Props) {
   const category = pkg.category ? getCategory(pkg.category) : undefined;
   const sourceUrl = pkg.urls.head || pkg.urls.stable || pkg.homepage;
+  const [deps, setDeps] = useState<string[]>([]);
+  const [dependents, setDependents] = useState<string[]>([]);
+  const [relLoading, setRelLoading] = useState(false);
+  const [pinBusy, setPinBusy] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -33,6 +45,50 @@ export function PackageDetail({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!pkg.installed || (!loadDeps && !loadDependents)) {
+      setDeps([]);
+      setDependents([]);
+      return;
+    }
+    setRelLoading(true);
+    void (async () => {
+      try {
+        const [nextDeps, nextDependents] = await Promise.all([
+          loadDeps ? loadDeps(pkg) : Promise.resolve([]),
+          loadDependents ? loadDependents(pkg) : Promise.resolve([]),
+        ]);
+        if (!cancelled) {
+          setDeps(nextDeps);
+          setDependents(nextDependents);
+        }
+      } catch {
+        if (!cancelled) {
+          setDeps([]);
+          setDependents([]);
+        }
+      } finally {
+        if (!cancelled) setRelLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pkg, loadDeps, loadDependents]);
+
+  async function handleUninstall() {
+    if (dependents.length > 0) {
+      const ok = window.confirm(
+        `${dependents.slice(0, 8).join(", ")}${
+          dependents.length > 8 ? "…" : ""
+        } need this package.\n\nUninstall ${pkg.name} anyway?`,
+      );
+      if (!ok) return;
+    }
+    onAction("uninstall", pkg);
+  }
 
   return (
     <div
@@ -100,11 +156,30 @@ export function PackageDetail({
                   Update
                 </button>
               )}
+              {pkg.installed && pkg.type === "formula" && onTogglePin && (
+                <button
+                  type="button"
+                  className="btn soft"
+                  disabled={pinBusy}
+                  onClick={() => {
+                    void (async () => {
+                      setPinBusy(true);
+                      try {
+                        await onTogglePin(pkg, !pinned);
+                      } finally {
+                        setPinBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  {pinned ? "Unpin" : "Pin version"}
+                </button>
+              )}
               {pkg.installed && (
                 <button
                   type="button"
                   className="btn danger"
-                  onClick={() => void onAction("uninstall", pkg)}
+                  onClick={() => void handleUninstall()}
                 >
                   Uninstall
                 </button>
@@ -130,6 +205,12 @@ export function PackageDetail({
             <dt>Tap</dt>
             <dd>{pkg.tap}</dd>
           </div>
+          {pkg.installed && pkg.type === "formula" && (
+            <div>
+              <dt>Pinned</dt>
+              <dd>{pinned ? "Yes — upgrades skipped" : "No"}</dd>
+            </div>
+          )}
           {pkg.license && (
             <div>
               <dt>License</dt>
@@ -137,6 +218,26 @@ export function PackageDetail({
             </div>
           )}
         </dl>
+
+        {pkg.installed && (
+          <div className="deps-block">
+            <h3>Dependencies</h3>
+            {relLoading ? (
+              <p className="muted">Loading…</p>
+            ) : (
+              <>
+                <p className="deps-label">Depends on</p>
+                <p className="deps-values">
+                  {deps.length ? deps.join(", ") : "None listed"}
+                </p>
+                <p className="deps-label">Required by (installed)</p>
+                <p className="deps-values">
+                  {dependents.length ? dependents.join(", ") : "Nothing else needs this"}
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="credit-box">
           <h3>Attribution</h3>

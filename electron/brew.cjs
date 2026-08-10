@@ -180,7 +180,7 @@ async function installHomebrew(onData) {
   return homebrewInstallInFlight;
 }
 
-function runBrew(brewPath, args, { onData } = {}) {
+function runBrew(brewPath, args, { onData, allowFail = false } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(brewPath, args, {
       env: {
@@ -206,8 +206,8 @@ function runBrew(brewPath, args, { onData } = {}) {
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
+      if (code === 0 || allowFail) {
+        resolve({ stdout, stderr, code: code ?? 0 });
         return;
       }
       const err = new Error(
@@ -502,6 +502,273 @@ async function upgradeAll(brewPath, onData) {
   return runBrew(brewPath, ["upgrade"], { onData });
 }
 
+const PROTECTED_TAPS = new Set(["homebrew/core", "homebrew/cask"]);
+
+async function listTaps(brewPath) {
+  const { stdout } = await runBrew(brewPath, ["tap"]);
+  return stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((name) => ({
+      name,
+      official: PROTECTED_TAPS.has(name) || name.startsWith("homebrew/"),
+      removable: !PROTECTED_TAPS.has(name),
+    }));
+}
+
+async function addTap(brewPath, name, onData) {
+  const tap = String(name || "").trim();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(tap)) {
+    throw new Error("Tap must look like user/repo");
+  }
+  await runBrew(brewPath, ["tap", tap], { onData });
+  return { ok: true };
+}
+
+async function removeTap(brewPath, name, onData) {
+  const tap = String(name || "").trim();
+  if (PROTECTED_TAPS.has(tap)) {
+    throw new Error(`Cannot remove protected tap: ${tap}`);
+  }
+  await runBrew(brewPath, ["untap", tap], { onData });
+  return { ok: true };
+}
+
+async function listPinned(brewPath) {
+  try {
+    const { stdout } = await runBrew(brewPath, ["list", "--pinned"]);
+    return stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function pinPackage(brewPath, { id }, onData) {
+  await runBrew(brewPath, ["pin", id], { onData });
+  return { ok: true };
+}
+
+async function unpinPackage(brewPath, { id }, onData) {
+  await runBrew(brewPath, ["unpin", id], { onData });
+  return { ok: true };
+}
+
+function parseSizeToBytes(text) {
+  const match = String(text).match(
+    /([\d.,]+)\s*(bytes?|KB|MB|GB|TB|KiB|MiB|GiB|TiB)/i,
+  );
+  if (!match) return 0;
+  const value = Number(match[1].replace(/,/g, ""));
+  if (!Number.isFinite(value)) return 0;
+  const unit = match[2].toLowerCase();
+  const factors = {
+    byte: 1,
+    bytes: 1,
+    kb: 1000,
+    kib: 1024,
+    mb: 1000 ** 2,
+    mib: 1024 ** 2,
+    gb: 1000 ** 3,
+    gib: 1024 ** 3,
+    tb: 1000 ** 4,
+    tib: 1024 ** 4,
+  };
+  return Math.round(value * (factors[unit] || 1));
+}
+
+async function cleanupDryRun(brewPath, onData) {
+  const { stdout, stderr } = await runBrew(
+    brewPath,
+    ["cleanup", "-n", "--prune=all"],
+    { onData, allowFail: true },
+  );
+  const text = `${stdout}\n${stderr}`;
+  const items = [];
+  let reclaimableBytes = 0;
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/would remove|removing:/i.test(trimmed) || trimmed.startsWith("/")) {
+      const bytes = parseSizeToBytes(trimmed);
+      reclaimableBytes += bytes;
+      items.push({ path: trimmed, bytes });
+    }
+  }
+  // Sometimes brew prints a summary line with total size
+  const summary = text.match(/This operation would free approximately\s+([^\n]+)/i);
+  if (summary) {
+    const summaryBytes = parseSizeToBytes(summary[1]);
+    if (summaryBytes > reclaimableBytes) reclaimableBytes = summaryBytes;
+  }
+  return {
+    items: items.slice(0, 200),
+    reclaimableBytes,
+    raw: text.trim(),
+  };
+}
+
+async function cleanup(brewPath, onData) {
+  await runBrew(brewPath, ["cleanup", "--prune=all"], { onData });
+  return { ok: true };
+}
+
+async function doctor(brewPath, onData) {
+  const { stdout, stderr, code } = await runBrew(brewPath, ["doctor"], {
+    onData,
+    allowFail: true,
+  });
+  const text = `${stdout}\n${stderr}`.trim();
+  const findings = [];
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/^error:/i.test(trimmed)) {
+      findings.push({ severity: "error", message: trimmed.replace(/^error:\s*/i, "") });
+    } else if (/^warning:/i.test(trimmed)) {
+      findings.push({
+        severity: "warning",
+        message: trimmed.replace(/^warning:\s*/i, ""),
+      });
+    } else if (/^please|your system|configuration|unexpected/i.test(trimmed)) {
+      findings.push({ severity: "note", message: trimmed });
+    }
+  }
+  if (findings.length === 0 && text) {
+    findings.push({
+      severity: code === 0 ? "note" : "warning",
+      message: code === 0 ? "Your system is ready to brew." : text.slice(0, 500),
+    });
+  }
+  return { ok: code === 0, code, findings, raw: text };
+}
+
+async function listServices(brewPath) {
+  try {
+    const { stdout } = await runBrew(brewPath, ["services", "list", "--json"], {
+      allowFail: true,
+    });
+    const data = JSON.parse(stdout || "[]");
+    if (!Array.isArray(data)) return [];
+    return data.map((row) => ({
+      name: row.name || row.service_name || "",
+      status: row.status || "unknown",
+      user: row.user || null,
+      file: row.file || null,
+    })).filter((row) => row.name);
+  } catch {
+    // Fallback plain list
+    try {
+      const { stdout } = await runBrew(brewPath, ["services", "list"], {
+        allowFail: true,
+      });
+      return stdout
+        .split("\n")
+        .slice(1)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const parts = line.split(/\s+/);
+          return {
+            name: parts[0] || "",
+            status: parts[1] || "unknown",
+            user: parts[2] || null,
+            file: null,
+          };
+        })
+        .filter((row) => row.name);
+    } catch {
+      return [];
+    }
+  }
+}
+
+async function serviceAction(brewPath, { name, action }, onData) {
+  const allowed = new Set(["start", "stop", "restart"]);
+  if (!allowed.has(action)) throw new Error(`Unsupported service action: ${action}`);
+  const service = String(name || "").trim();
+  if (!service) throw new Error("Service name required");
+  await runBrew(brewPath, ["services", action, service], { onData });
+  return { ok: true };
+}
+
+async function getDeps(brewPath, { id, type }) {
+  try {
+    if (type === "cask") {
+      const { stdout } = await runBrew(
+        brewPath,
+        ["deps", "--cask", id],
+        { allowFail: true },
+      );
+      return stdout
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+    }
+    const { stdout } = await runBrew(
+      brewPath,
+      ["deps", "--json=v2", id],
+      { allowFail: true },
+    );
+    try {
+      const data = JSON.parse(stdout || "[]");
+      const row = Array.isArray(data) ? data[0] : data;
+      const deps = row?.deps || row?.dependencies || [];
+      if (Array.isArray(deps)) {
+        return deps.map((d) => (typeof d === "string" ? d : d.name)).filter(Boolean);
+      }
+    } catch {
+      // fall through to plain
+    }
+    const { stdout: plain } = await runBrew(brewPath, ["deps", id], {
+      allowFail: true,
+    });
+    return plain
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function getDependents(brewPath, { id }) {
+  try {
+    const { stdout } = await runBrew(
+      brewPath,
+      ["uses", "--installed", id],
+      { allowFail: true },
+    );
+    return stdout
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function bundleDump(brewPath, filePath, onData) {
+  if (!filePath) throw new Error("Brewfile path required");
+  await runBrew(
+    brewPath,
+    ["bundle", "dump", "--force", `--file=${filePath}`],
+    { onData },
+  );
+  return { ok: true, path: filePath };
+}
+
+async function bundleInstall(brewPath, filePath, onData) {
+  if (!filePath) throw new Error("Brewfile path required");
+  await runBrew(brewPath, ["bundle", "install", `--file=${filePath}`], {
+    onData,
+  });
+  return { ok: true, path: filePath };
+}
+
 async function getBrewInfo() {
   const status = await probeBrew();
   if (!status.installed) {
@@ -530,5 +797,20 @@ module.exports = {
   uninstallPackage,
   upgradePackage,
   upgradeAll,
+  listTaps,
+  addTap,
+  removeTap,
+  listPinned,
+  pinPackage,
+  unpinPackage,
+  cleanupDryRun,
+  cleanup,
+  doctor,
+  listServices,
+  serviceAction,
+  getDeps,
+  getDependents,
+  bundleDump,
+  bundleInstall,
   getBrewInfo,
 };

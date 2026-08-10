@@ -7,6 +7,7 @@ import {
   Info,
   Search,
   RefreshCw,
+  Wrench,
 } from "lucide-react";
 import { CATEGORIES, getCategory, packageKey, withCategories } from "./categories";
 import type {
@@ -26,6 +27,7 @@ import { UpdatesView } from "./components/UpdatesView";
 import { ActionLog } from "./components/ActionLog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { BrewOnboarding } from "./components/BrewOnboarding";
+import { MaintainView } from "./components/MaintainView";
 import { useTheme } from "./hooks/useTheme";
 import { COLLECTIONS, resolveCollection } from "./discovery/collections";
 import { recommendForYou } from "./discovery/recommend";
@@ -39,13 +41,20 @@ import {
 import { resolveTrending } from "./discovery/trending";
 import "./App.css";
 
-type NavId = "discover" | "categories" | "installed" | "updates" | "credits";
+type NavId =
+  | "discover"
+  | "categories"
+  | "installed"
+  | "updates"
+  | "maintain"
+  | "credits";
 
 const NAV: { id: NavId; label: string; icon: typeof Compass }[] = [
   { id: "discover", label: "Discover", icon: Compass },
   { id: "categories", label: "Categories", icon: Grid2x2 },
   { id: "installed", label: "Installed", icon: Download },
   { id: "updates", label: "Updates", icon: ArrowUpCircle },
+  { id: "maintain", label: "Maintain", icon: Wrench },
   { id: "credits", label: "Credits", icon: Info },
 ];
 
@@ -80,14 +89,21 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
+  const [appVersion, setAppVersion] = useState("1.1.0");
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const api = typeof window !== "undefined" ? window.brewStore : undefined;
 
   const refreshStatus = useCallback(async () => {
     if (!api) return;
-    const [inst, out] = await Promise.all([api.getInstalled(), api.getOutdated()]);
+    const [inst, out, pinned] = await Promise.all([
+      api.getInstalled(),
+      api.getOutdated(),
+      api.listPinned().catch(() => [] as string[]),
+    ]);
     setInstalled(inst);
     setOutdated(out);
+    setPinnedIds(new Set(pinned));
   }, [api]);
 
   const loadAll = useCallback(
@@ -118,6 +134,9 @@ function App() {
         ]);
         setBrewVersion(info.version);
         setCounts(catalog.counts);
+        if (api.getAppVersion) {
+          void api.getAppVersion().then((v) => setAppVersion(v.version));
+        }
         startTransition(() => {
           setPackages(withCategories(catalog.packages));
         });
@@ -449,6 +468,7 @@ function App() {
             onOpen={openPackage}
             onAction={runAction}
             busyId={busyId}
+            pinnedIds={pinnedIds}
           />
         </section>
       );
@@ -469,8 +489,26 @@ function App() {
       );
     }
 
+    if (nav === "maintain") {
+      if (!api) {
+        return (
+          <div className="state-panel glass-card">
+            <p>Open BrewStore from Applications (Electron required).</p>
+          </div>
+        );
+      }
+      return (
+        <MaintainView
+          api={api}
+          onLog={(line) => setLog((prev) => [...prev.slice(-100), line])}
+          onRefreshInstalled={refreshStatus}
+        />
+      );
+    }
+
     return (
       <CreditsView
+        appVersion={appVersion}
         brewVersion={brewVersion}
         counts={counts}
         onOpenExternal={(url) => void api?.openExternal(url)}
@@ -494,6 +532,7 @@ function App() {
           <div>
             <div className="brand-name">BrewStore</div>
             <div className="brand-by">by Manish Vagh</div>
+            <div className="brand-version">v{appVersion}</div>
           </div>
         </div>
 
@@ -590,11 +629,34 @@ function App() {
             selected
           }
           similar={similarForSelected}
+          pinned={pinnedIds.has(selected.id)}
           busy={busyId === selected.id || updatingIds.has(packageKey(selected))}
           onClose={() => setSelected(null)}
           onAction={runAction}
           onOpenExternal={(url) => void api?.openExternal(url)}
           onOpenPackage={(pkg) => setSelected(pkg)}
+          onTogglePin={
+            api
+              ? async (pkg, pin) => {
+                  const result = pin ? await api.pin(pkg) : await api.unpin(pkg);
+                  setPinnedIds(new Set(result.pinned));
+                  setLog((prev) => [
+                    ...prev.slice(-100),
+                    `✓ ${pin ? "pinned" : "unpinned"} ${pkg.id}`,
+                  ]);
+                }
+              : undefined
+          }
+          loadDeps={
+            api
+              ? async (pkg) => api.getDeps(pkg)
+              : undefined
+          }
+          loadDependents={
+            api
+              ? async (pkg) => api.getDependents(pkg)
+              : undefined
+          }
         />
       )}
     </div>

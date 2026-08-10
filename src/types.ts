@@ -71,11 +71,43 @@ export interface BrewStatus {
   brewSite: string;
 }
 
+export interface BrewTap {
+  name: string;
+  official: boolean;
+  removable: boolean;
+}
+
+export interface BrewService {
+  name: string;
+  status: string;
+  user: string | null;
+  file: string | null;
+}
+
+export interface CleanupPreview {
+  items: Array<{ path: string; bytes: number }>;
+  reclaimableBytes: number;
+  raw: string;
+}
+
+export interface DoctorFinding {
+  severity: "error" | "warning" | "note";
+  message: string;
+}
+
+export interface DoctorReport {
+  ok: boolean;
+  code: number;
+  findings: DoctorFinding[];
+  raw: string;
+}
+
 export interface BrewStoreApi {
   getBrewInfo: () => Promise<{ brewPath: string; version: string }>;
   getBrewStatus: () => Promise<BrewStatus>;
   recheckBrew: () => Promise<BrewStatus>;
   installHomebrew: () => Promise<BrewStatus>;
+  getAppVersion: () => Promise<{ version: string; name: string }>;
   writeClipboardText: (text: string) => Promise<{ ok: boolean }>;
   loadCatalog: (opts?: { force?: boolean }) => Promise<CatalogPayload>;
   loadTrending: (opts?: { force?: boolean }) => Promise<TrendingPayload>;
@@ -85,6 +117,24 @@ export interface BrewStoreApi {
   uninstall: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean }>;
   upgrade: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean }>;
   upgradeAll: () => Promise<{ ok: boolean }>;
+  listTaps: () => Promise<BrewTap[]>;
+  addTap: (name: string) => Promise<BrewTap[]>;
+  removeTap: (name: string) => Promise<BrewTap[]>;
+  listPinned: () => Promise<string[]>;
+  pin: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean; pinned: string[] }>;
+  unpin: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean; pinned: string[] }>;
+  cleanupDryRun: () => Promise<CleanupPreview>;
+  cleanup: () => Promise<{ ok: boolean }>;
+  doctor: () => Promise<DoctorReport>;
+  listServices: () => Promise<BrewService[]>;
+  serviceAction: (payload: {
+    name: string;
+    action: "start" | "stop" | "restart";
+  }) => Promise<BrewService[]>;
+  getDeps: (pkg: { id: string; type: PackageType }) => Promise<string[]>;
+  getDependents: (pkg: { id: string; type: PackageType }) => Promise<string[]>;
+  bundleExport: () => Promise<{ ok: boolean; canceled?: boolean; path?: string }>;
+  bundleImport: () => Promise<{ ok: boolean; canceled?: boolean; path?: string }>;
   openExternal: (url: string) => Promise<{ ok: boolean }>;
   resolveIcons: (
     packages: Array<Pick<BrewPackage, "id" | "type" | "name" | "token" | "homepage" | "appNames">>,
