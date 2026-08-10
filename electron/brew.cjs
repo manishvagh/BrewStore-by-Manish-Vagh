@@ -14,6 +14,10 @@ const BREW_CANDIDATES = [
 
 const CASK_API = "https://formulae.brew.sh/api/cask.json";
 const FORMULA_API = "https://formulae.brew.sh/api/formula.json";
+const CASK_ANALYTICS_API =
+  "https://formulae.brew.sh/api/analytics/cask-install/homebrew-cask/30d.json";
+const FORMULA_ANALYTICS_API =
+  "https://formulae.brew.sh/api/analytics/install-on-request/homebrew-core/30d.json";
 const CATALOG_TTL_MS = 1000 * 60 * 60 * 12;
 
 const BREW_INSTALL_SCRIPT =
@@ -360,6 +364,68 @@ async function loadCatalog(userDataPath, { force = false } = {}) {
   return payload;
 }
 
+function parseAnalyticsCount(raw) {
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") {
+    return Number(String(raw).replace(/,/g, "")) || 0;
+  }
+  return 0;
+}
+
+function rankAnalyticsFormulae(formulaeMap, nameKey) {
+  const rows = [];
+  if (!formulaeMap || typeof formulaeMap !== "object") return rows;
+  for (const entries of Object.values(formulaeMap)) {
+    const list = Array.isArray(entries) ? entries : [entries];
+    for (const entry of list) {
+      if (!entry || typeof entry !== "object") continue;
+      const token = entry[nameKey] || entry.formula || entry.cask;
+      if (!token) continue;
+      rows.push({
+        token: String(token),
+        count: parseAnalyticsCount(entry.count),
+      });
+    }
+  }
+  rows.sort((a, b) => b.count - a.count);
+  return rows;
+}
+
+async function loadTrending(userDataPath, { force = false } = {}) {
+  const cachePath = path.join(userDataPath, "trending-cache-v1.json");
+  if (!force) {
+    const cached = await readCache(cachePath);
+    if (cached) return cached;
+  }
+
+  try {
+    const [caskData, formulaData] = await Promise.all([
+      fetchJson(CASK_ANALYTICS_API),
+      fetchJson(FORMULA_ANALYTICS_API),
+    ]);
+
+    const payload = {
+      cachedAt: Date.now(),
+      casks: rankAnalyticsFormulae(caskData.formulae, "cask").slice(0, 80),
+      formulae: rankAnalyticsFormulae(formulaData.formulae, "formula").slice(
+        0,
+        80,
+      ),
+    };
+    await writeCache(cachePath, payload);
+    return payload;
+  } catch (err) {
+    const cached = await readCache(cachePath).catch(() => null);
+    if (cached) return cached;
+    return {
+      cachedAt: Date.now(),
+      casks: [],
+      formulae: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 function parseListVersions(stdout, type) {
   const installed = {};
   for (const line of stdout.split("\n")) {
@@ -457,6 +523,7 @@ module.exports = {
   BREW_INSTALL_SCRIPT,
   BREW_SITE,
   loadCatalog,
+  loadTrending,
   getInstalled,
   getOutdated,
   installPackage,

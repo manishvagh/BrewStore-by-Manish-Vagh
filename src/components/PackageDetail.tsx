@@ -6,13 +6,23 @@ import { PackageIcon } from "./PackageIcon";
 
 interface Props {
   pkg: BrewPackage;
+  similar: BrewPackage[];
   busy: boolean;
   onClose: () => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenExternal: (url: string) => void;
+  onOpenPackage: (pkg: BrewPackage) => void;
 }
 
-export function PackageDetail({ pkg, busy, onClose, onAction, onOpenExternal }: Props) {
+export function PackageDetail({
+  pkg,
+  similar,
+  busy,
+  onClose,
+  onAction,
+  onOpenExternal,
+  onOpenPackage,
+}: Props) {
   const category = pkg.category ? getCategory(pkg.category) : undefined;
   const sourceUrl = pkg.urls.head || pkg.urls.stable || pkg.homepage;
 
@@ -159,6 +169,28 @@ export function PackageDetail({ pkg, busy, onClose, onAction, onOpenExternal }: 
             </button>
           </div>
         </div>
+
+        {similar.length > 0 && (
+          <div className="similar-block">
+            <h3>Similar packages</h3>
+            <div className="similar-list">
+              {similar.map((item) => (
+                <button
+                  key={`${item.type}:${item.id}`}
+                  type="button"
+                  className="similar-item"
+                  onClick={() => onOpenPackage(item)}
+                >
+                  <PackageIcon pkg={item} size="sm" />
+                  <span>
+                    <strong>{item.name}</strong>
+                    <small>{item.type}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </aside>
     </div>
   );

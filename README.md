@@ -19,6 +19,9 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 | **Casks and formulae together** | GUI apps and CLI libraries in one place |
 | **Search the whole index** | Match on name, token, and description — not only packages you already remember |
 | **Explore by category** | Developer Tools, Browsers, Productivity, and more — discover by job, not by package ID |
+| **For you & collections** | Suggestions from your installs, plus curated lists like New Mac setup |
+| **Trending** | Popular Homebrew installs from public 30-day analytics |
+| **Smarter search** | Filters for cask/formula, installed, GUI, open source — plus synonyms |
 | **Details before you install** | Version, type, tap, license, plus homepage / formula / source links |
 | **Real app icons** | Local `.app` icons when installed, with remote fallbacks — feels like a store |
 | **Full lifecycle** | Install, update, uninstall, and Update All from the UI |
@@ -63,6 +66,11 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 ## Features
 
 - Visual discovery of the full Homebrew catalog (casks + formulae)
+- For you recommendations based on installed packages
+- Curated collections (New Mac setup, Designers, CLI essentials, Dev stack)
+- Trending packages from Homebrew analytics (30-day installs)
+- Search with filters (cask/formula, installed, GUI, open source) plus synonyms
+- Similar packages on the detail view
 - Search across name, token, and description
 - Category-based browsing (Developer Tools, Productivity, Browsers, and more)
 - Featured apps on Discover for quick starts

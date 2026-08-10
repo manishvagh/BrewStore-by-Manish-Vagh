@@ -30,6 +30,13 @@ export interface CatalogPayload {
   };
 }
 
+export interface TrendingPayload {
+  cachedAt: number;
+  casks: Array<{ token: string; count: number }>;
+  formulae: Array<{ token: string; count: number }>;
+  error?: string;
+}
+
 export interface InstalledMap {
   [key: string]: {
     id: string;
@@ -71,6 +78,7 @@ export interface BrewStoreApi {
   installHomebrew: () => Promise<BrewStatus>;
   writeClipboardText: (text: string) => Promise<{ ok: boolean }>;
   loadCatalog: (opts?: { force?: boolean }) => Promise<CatalogPayload>;
+  loadTrending: (opts?: { force?: boolean }) => Promise<TrendingPayload>;
   getInstalled: () => Promise<InstalledMap>;
   getOutdated: () => Promise<OutdatedMap>;
   install: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean }>;

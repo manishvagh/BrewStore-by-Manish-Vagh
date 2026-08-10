@@ -136,6 +136,10 @@ ipcMain.handle("catalog:load", async (_event, { force = false } = {}) => {
   return brew.loadCatalog(app.getPath("userData"), { force });
 });
 
+ipcMain.handle("trending:load", async (_event, { force = false } = {}) => {
+  return brew.loadTrending(app.getPath("userData"), { force });
+});
+
 ipcMain.handle("brew:installed", async () => {
   const brewPath = await getBrewPath();
   return brew.getInstalled(brewPath);
