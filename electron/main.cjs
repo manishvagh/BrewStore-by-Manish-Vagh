@@ -188,6 +188,23 @@ ipcMain.handle("app:get-version", async () => ({
   name: pkg.productName || "BrewStore",
 }));
 
+ipcMain.handle("app:check-update", async () => {
+  const current = app.getVersion() || pkg.version || "0.0.0";
+  return brew.checkAppUpdate(current);
+});
+
+ipcMain.handle("brew:disk-usage", async (_event, packages) => {
+  const brewPath = await getBrewPath();
+  return brew.getDiskUsageMap(brewPath, packages);
+});
+
+ipcMain.handle("shell:open-app", async (_event, pkgInfo) => {
+  if (!pkgInfo || pkgInfo.type !== "cask") {
+    return { ok: false, error: "Only installed casks can be opened" };
+  }
+  return brew.openInstalledCask(pkgInfo);
+});
+
 ipcMain.handle("brew:taps", async () => {
   const brewPath = await getBrewPath();
   return brew.listTaps(brewPath);

@@ -102,12 +102,31 @@ export interface DoctorReport {
   raw: string;
 }
 
+export interface DiskUsageInfo {
+  id: string;
+  type: PackageType;
+  bytes: number;
+  path: string | null;
+  missing?: boolean;
+}
+
+export interface AppUpdateInfo {
+  updateAvailable: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  releaseUrl: string;
+  downloadUrl: string | null;
+  notes: string;
+  publishedAt: string | null;
+}
+
 export interface BrewStoreApi {
   getBrewInfo: () => Promise<{ brewPath: string; version: string }>;
   getBrewStatus: () => Promise<BrewStatus>;
   recheckBrew: () => Promise<BrewStatus>;
   installHomebrew: () => Promise<BrewStatus>;
   getAppVersion: () => Promise<{ version: string; name: string }>;
+  checkForUpdate: () => Promise<AppUpdateInfo>;
   writeClipboardText: (text: string) => Promise<{ ok: boolean }>;
   loadCatalog: (opts?: { force?: boolean }) => Promise<CatalogPayload>;
   loadTrending: (opts?: { force?: boolean }) => Promise<TrendingPayload>;
@@ -117,6 +136,9 @@ export interface BrewStoreApi {
   uninstall: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean }>;
   upgrade: (pkg: { id: string; type: PackageType }) => Promise<{ ok: boolean }>;
   upgradeAll: () => Promise<{ ok: boolean }>;
+  getDiskUsage: (
+    packages: Array<{ id: string; type: PackageType }>,
+  ) => Promise<Record<string, DiskUsageInfo>>;
   listTaps: () => Promise<BrewTap[]>;
   addTap: (name: string) => Promise<BrewTap[]>;
   removeTap: (name: string) => Promise<BrewTap[]>;
@@ -136,6 +158,12 @@ export interface BrewStoreApi {
   bundleExport: () => Promise<{ ok: boolean; canceled?: boolean; path?: string }>;
   bundleImport: () => Promise<{ ok: boolean; canceled?: boolean; path?: string }>;
   openExternal: (url: string) => Promise<{ ok: boolean }>;
+  openInstalledApp: (pkg: {
+    id: string;
+    type: PackageType;
+    name?: string;
+    appNames?: string[];
+  }) => Promise<{ ok: boolean; app?: string; error?: string }>;
   resolveIcons: (
     packages: Array<Pick<BrewPackage, "id" | "type" | "name" | "token" | "homepage" | "appNames">>,
   ) => Promise<Record<string, string | null>>;

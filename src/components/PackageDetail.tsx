@@ -3,17 +3,21 @@ import { ExternalLink, X } from "lucide-react";
 import type { BrewPackage } from "../types";
 import { getCategory } from "../categories";
 import { PackageIcon } from "./PackageIcon";
+import { brewInstallCommand, formatBytes } from "../lib/format";
 
 interface Props {
   pkg: BrewPackage;
   similar: BrewPackage[];
   pinned: boolean;
   busy: boolean;
+  diskBytes?: number | null;
   onClose: () => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenExternal: (url: string) => void;
   onOpenPackage: (pkg: BrewPackage) => void;
   onTogglePin?: (pkg: BrewPackage, pin: boolean) => Promise<void>;
+  onOpenApp?: (pkg: BrewPackage) => void;
+  onCopyInstall?: (pkg: BrewPackage) => void;
   loadDeps?: (pkg: BrewPackage) => Promise<string[]>;
   loadDependents?: (pkg: BrewPackage) => Promise<string[]>;
 }
@@ -23,11 +27,14 @@ export function PackageDetail({
   similar,
   pinned,
   busy,
+  diskBytes,
   onClose,
   onAction,
   onOpenExternal,
   onOpenPackage,
   onTogglePin,
+  onOpenApp,
+  onCopyInstall,
   loadDeps,
   loadDependents,
 }: Props) {
@@ -138,6 +145,26 @@ export function PackageDetail({
             </div>
           ) : (
             <>
+              {pkg.installed && pkg.type === "cask" && onOpenApp && (
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={busy}
+                  onClick={() => onOpenApp(pkg)}
+                >
+                  Open app
+                </button>
+              )}
+              {onCopyInstall && (
+                <button
+                  type="button"
+                  className="btn soft"
+                  onClick={() => onCopyInstall(pkg)}
+                  title={brewInstallCommand(pkg)}
+                >
+                  Copy install
+                </button>
+              )}
               {!pkg.installed && (
                 <button
                   type="button"
@@ -205,6 +232,12 @@ export function PackageDetail({
             <dt>Tap</dt>
             <dd>{pkg.tap}</dd>
           </div>
+          {pkg.installed && typeof diskBytes === "number" && diskBytes > 0 && (
+            <div>
+              <dt>Disk</dt>
+              <dd>{formatBytes(diskBytes)}</dd>
+            </div>
+          )}
           {pkg.installed && pkg.type === "formula" && (
             <div>
               <dt>Pinned</dt>

@@ -12,6 +12,8 @@ interface Props {
   query: string;
   filtering: boolean;
   busyId: string | null;
+  busyKeys?: Set<string>;
+  queuedKeys?: Set<string>;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenCategory: (id: string) => void;
@@ -30,28 +32,36 @@ const QUICK_CATEGORIES: { id: string; name: string }[] = [
 function PackageRow({
   packages,
   busyId,
+  busyKeys,
+  queuedKeys,
   onOpen,
   onAction,
   featured,
 }: {
   packages: BrewPackage[];
   busyId: string | null;
+  busyKeys?: Set<string>;
+  queuedKeys?: Set<string>;
   onOpen: Props["onOpen"];
   onAction: Props["onAction"];
   featured?: boolean;
 }) {
   return (
     <div className={featured ? "featured-row" : "package-grid"}>
-      {packages.map((pkg) => (
-        <PackageCard
-          key={`${pkg.type}:${pkg.id}`}
-          pkg={pkg}
-          featured={featured}
-          busy={busyId === pkg.id}
-          onOpen={onOpen}
-          onAction={onAction}
-        />
-      ))}
+      {packages.map((pkg) => {
+        const key = `${pkg.type}:${pkg.id}`;
+        return (
+          <PackageCard
+            key={key}
+            pkg={pkg}
+            featured={featured}
+            busy={busyId === pkg.id || Boolean(busyKeys?.has(key))}
+            queued={Boolean(queuedKeys?.has(key))}
+            onOpen={onOpen}
+            onAction={onAction}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -66,6 +76,8 @@ export function DiscoverView({
   query,
   filtering,
   busyId,
+  busyKeys,
+  queuedKeys,
   onOpen,
   onAction,
   onOpenCategory,
@@ -75,6 +87,7 @@ export function DiscoverView({
   const activeCollection = collections.find(
     (row) => row.collection.id === activeCollectionId,
   );
+  const rowProps = { busyId, busyKeys, queuedKeys, onOpen, onAction };
 
   if (query || filtering) {
     return (
@@ -88,9 +101,7 @@ export function DiscoverView({
         ) : (
           <PackageRow
             packages={packages.slice(0, query ? packages.length : 120)}
-            busyId={busyId}
-            onOpen={onOpen}
-            onAction={onAction}
+            {...rowProps}
           />
         )}
       </section>
@@ -111,12 +122,7 @@ export function DiscoverView({
           <h1>{activeCollection.collection.name}</h1>
           <p>{activeCollection.collection.blurb}</p>
         </header>
-        <PackageRow
-          packages={activeCollection.packages}
-          busyId={busyId}
-          onOpen={onOpen}
-          onAction={onAction}
-        />
+        <PackageRow packages={activeCollection.packages} {...rowProps} />
       </section>
     );
   }
@@ -144,13 +150,7 @@ export function DiscoverView({
             <h2>For you</h2>
             <p>Suggested from what’s already on this Mac</p>
           </div>
-          <PackageRow
-            packages={forYou}
-            busyId={busyId}
-            onOpen={onOpen}
-            onAction={onAction}
-            featured
-          />
+          <PackageRow packages={forYou} {...rowProps} featured />
         </>
       )}
 
@@ -181,13 +181,7 @@ export function DiscoverView({
             <h2>Trending</h2>
             <p>Popular installs across Homebrew (last 30 days)</p>
           </div>
-          <PackageRow
-            packages={trending}
-            busyId={busyId}
-            onOpen={onOpen}
-            onAction={onAction}
-            featured
-          />
+          <PackageRow packages={trending} {...rowProps} featured />
         </>
       )}
 
@@ -211,24 +205,13 @@ export function DiscoverView({
         <h2>Featured</h2>
         <p>Popular GUI apps available via Homebrew Cask</p>
       </div>
-      <PackageRow
-        packages={featured}
-        busyId={busyId}
-        onOpen={onOpen}
-        onAction={onAction}
-        featured
-      />
+      <PackageRow packages={featured} {...rowProps} featured />
 
       <div className="section-head">
         <h2>Browse</h2>
         <p>A slice of the catalog — use search or collections for more</p>
       </div>
-      <PackageRow
-        packages={spotlight}
-        busyId={busyId}
-        onOpen={onOpen}
-        onAction={onAction}
-      />
+      <PackageRow packages={spotlight} {...rowProps} />
     </section>
   );
 }

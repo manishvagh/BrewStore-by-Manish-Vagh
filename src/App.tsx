@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import {
   Compass,
   Grid2x2,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES, getCategory, packageKey, withCategories } from "./categories";
 import type {
+  AppUpdateInfo,
   BrewPackage,
   BrewStatus,
   InstalledMap,
@@ -28,6 +29,8 @@ import { ActionLog } from "./components/ActionLog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { BrewOnboarding } from "./components/BrewOnboarding";
 import { MaintainView } from "./components/MaintainView";
+import { CommandPalette, type PaletteAction } from "./components/CommandPalette";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { useTheme } from "./hooks/useTheme";
 import { COLLECTIONS, resolveCollection } from "./discovery/collections";
 import { recommendForYou } from "./discovery/recommend";
@@ -39,6 +42,7 @@ import {
   type SearchFilters,
 } from "./discovery/search";
 import { resolveTrending } from "./discovery/trending";
+import { brewInstallCommand } from "./lib/format";
 import "./App.css";
 
 type NavId =
@@ -84,14 +88,26 @@ function App() {
   const [selected, setSelected] = useState<BrewPackage | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
+  const [queuedKeys, setQueuedKeys] = useState<Set<string>>(() => new Set());
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(() => new Set());
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(() => new Set());
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.1.0");
+  const [appVersion, setAppVersion] = useState("1.2.0");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
+  const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
+  const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const actionQueueRef = useRef<
+    Array<{ action: "install" | "uninstall" | "upgrade"; pkg: BrewPackage }>
+  >([]);
+  const queueRunningRef = useRef(false);
   const api = typeof window !== "undefined" ? window.brewStore : undefined;
 
   const refreshStatus = useCallback(async () => {
@@ -177,6 +193,82 @@ function App() {
       setLog((prev) => [...prev.slice(-100), line]);
     });
   }, [api]);
+
+  useEffect(() => {
+    if (!api?.checkForUpdate || brewMissing) return;
+    const timer = window.setTimeout(() => {
+      void checkAppUpdate(false);
+    }, 2500);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, brewMissing]);
+
+  useEffect(() => {
+    if (!api?.getDiskUsage || nav !== "installed" || brewMissing) return;
+    const packages = Object.values(installed).map((item) => ({
+      id: item.id,
+      type: item.type,
+    }));
+    if (packages.length === 0) {
+      setDiskUsage({});
+      return;
+    }
+    let cancelled = false;
+    void api
+      .getDiskUsage(packages)
+      .then((map) => {
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const [key, info] of Object.entries(map)) {
+          if (info?.bytes) next[key] = info.bytes;
+        }
+        setDiskUsage(next);
+      })
+      .catch(() => {
+        if (!cancelled) setDiskUsage({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, nav, installed, brewMissing]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+        return;
+      }
+
+      if (event.key === "/" && !typing && !paletteOpen && !brewMissing) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "i" &&
+        selected &&
+        !selected.installed &&
+        !typing
+      ) {
+        event.preventDefault();
+        void runAction("install", selected);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paletteOpen, brewMissing, selected]);
 
   const handleInstallHomebrew = useCallback(async () => {
     if (!api) return;
@@ -309,32 +401,162 @@ function App() {
   ) {
     if (!api) return;
     const key = packageKey(pkg);
-    setBusyId(pkg.id);
-    if (action === "upgrade") {
-      setUpdatingIds((prev) => new Set(prev).add(key));
+    const already =
+      busyKeys.has(key) ||
+      queuedKeys.has(key) ||
+      actionQueueRef.current.some(
+        (item) => packageKey(item.pkg) === key && item.action === action,
+      );
+    if (already) {
+      setLog((prev) => [...prev.slice(-100), `… already queued: ${pkg.id}`]);
+      return;
     }
-    setLog((prev) => [...prev, `→ brew ${action} ${pkg.id}`]);
-    try {
-      if (action === "install") await api.install(pkg);
-      if (action === "uninstall") await api.uninstall(pkg);
-      if (action === "upgrade") await api.upgrade(pkg);
-      setLog((prev) => [...prev, `✓ ${action} finished: ${pkg.id}`]);
-      if (action === "upgrade") {
-        dismissFromUpdates(pkg);
-      }
-      await refreshStatus();
-    } catch (err) {
-      setUpdatingIds((prev) => {
+
+    actionQueueRef.current.push({ action, pkg });
+    setQueuedKeys((prev) => new Set(prev).add(key));
+    setLog((prev) => [
+      ...prev.slice(-100),
+      `＋ queued ${action} ${pkg.id} (${actionQueueRef.current.length} in queue)`,
+    ]);
+    void processActionQueue();
+  }
+
+  async function processActionQueue() {
+    if (!api || queueRunningRef.current) return;
+    queueRunningRef.current = true;
+
+    while (actionQueueRef.current.length > 0) {
+      const item = actionQueueRef.current.shift();
+      if (!item) break;
+      const { action, pkg } = item;
+      const key = packageKey(pkg);
+
+      setQueuedKeys((prev) => {
         const next = new Set(prev);
         next.delete(key);
         return next;
       });
-      setLog((prev) => [
-        ...prev,
-        `✗ ${action} failed: ${err instanceof Error ? err.message : String(err)}`,
-      ]);
+      setBusyId(pkg.id);
+      setBusyKeys((prev) => new Set(prev).add(key));
+      if (action === "upgrade") {
+        setUpdatingIds((prev) => new Set(prev).add(key));
+      }
+      setLog((prev) => [...prev.slice(-100), `→ brew ${action} ${pkg.id}`]);
+
+      try {
+        if (action === "install") await api.install(pkg);
+        if (action === "uninstall") await api.uninstall(pkg);
+        if (action === "upgrade") await api.upgrade(pkg);
+        setLog((prev) => [...prev.slice(-100), `✓ ${action} finished: ${pkg.id}`]);
+        if (action === "upgrade") dismissFromUpdates(pkg);
+        await refreshStatus();
+      } catch (err) {
+        setUpdatingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+        setLog((prev) => [
+          ...prev.slice(-100),
+          `✗ ${action} failed: ${err instanceof Error ? err.message : String(err)}`,
+        ]);
+      } finally {
+        setBusyKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+        setBusyId(null);
+      }
+    }
+
+    queueRunningRef.current = false;
+  }
+
+  async function checkAppUpdate(manual = false) {
+    if (!api?.checkForUpdate) return;
+    setCheckingUpdate(true);
+    try {
+      const info = await api.checkForUpdate();
+      setAppUpdate(info);
+      if (manual && !info.updateAvailable) {
+        setLog((prev) => [
+          ...prev.slice(-100),
+          `✓ BrewStore is up to date (v${info.currentVersion})`,
+        ]);
+      } else if (info.updateAvailable) {
+        setUpdateDismissed(false);
+        setLog((prev) => [
+          ...prev.slice(-100),
+          `↑ BrewStore ${info.latestVersion} available`,
+        ]);
+      }
+    } catch (err) {
+      if (manual) {
+        setLog((prev) => [
+          ...prev.slice(-100),
+          `✗ update check failed: ${err instanceof Error ? err.message : String(err)}`,
+        ]);
+      }
     } finally {
-      setBusyId(null);
+      setCheckingUpdate(false);
+    }
+  }
+
+  async function openInstalledApp(pkg: BrewPackage) {
+    if (!api?.openInstalledApp || pkg.type !== "cask") return;
+    try {
+      const result = await api.openInstalledApp(pkg);
+      setLog((prev) => [
+        ...prev.slice(-100),
+        result.ok
+          ? `✓ opened ${result.app || pkg.name}`
+          : `✗ open failed: ${result.error || "unknown"}`,
+      ]);
+    } catch (err) {
+      setLog((prev) => [
+        ...prev.slice(-100),
+        `✗ open failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
+    }
+  }
+
+  async function copyInstallCommand(pkg: BrewPackage) {
+    const cmd = brewInstallCommand(pkg);
+    try {
+      await api?.writeClipboardText(cmd);
+      setLog((prev) => [...prev.slice(-100), `✓ copied: ${cmd}`]);
+    } catch (err) {
+      setLog((prev) => [
+        ...prev.slice(-100),
+        `✗ copy failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
+    }
+  }
+
+  function handlePaletteAction(action: PaletteAction) {
+    if (action.kind === "nav") {
+      setNav(action.id as NavId);
+      setActiveCategory(null);
+      setActiveCollectionId(null);
+      setSelected(null);
+      return;
+    }
+    if (action.kind === "focus-search") {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+      return;
+    }
+    if (action.kind === "check-update") {
+      void checkAppUpdate(true);
+      setNav("credits");
+      return;
+    }
+    if (action.kind === "pkg") {
+      if (action.action === "open") openPackage(action.pkg);
+      if (action.action === "install") void runAction("install", action.pkg);
+      if (action.action === "upgrade") void runAction("upgrade", action.pkg);
+      if (action.action === "copy") void copyInstallCommand(action.pkg);
     }
   }
 
@@ -418,6 +640,8 @@ function App() {
           onOpen={openPackage}
           onAction={runAction}
           busyId={busyId}
+          busyKeys={busyKeys}
+          queuedKeys={queuedKeys}
         />
       );
     }
@@ -442,6 +666,8 @@ function App() {
           }}
           onOpenCollection={setActiveCollectionId}
           busyId={busyId}
+          busyKeys={busyKeys}
+          queuedKeys={queuedKeys}
         />
       );
     }
@@ -468,7 +694,12 @@ function App() {
             onOpen={openPackage}
             onAction={runAction}
             busyId={busyId}
+            busyKeys={busyKeys}
+            queuedKeys={queuedKeys}
             pinnedIds={pinnedIds}
+            diskUsage={diskUsage}
+            onOpenApp={(pkg) => void openInstalledApp(pkg)}
+            onCopyInstall={(pkg) => void copyInstallCommand(pkg)}
           />
         </section>
       );
@@ -511,6 +742,14 @@ function App() {
         appVersion={appVersion}
         brewVersion={brewVersion}
         counts={counts}
+        appUpdate={updateDismissed ? null : appUpdate}
+        checkingUpdate={checkingUpdate}
+        onCheckUpdate={() => void checkAppUpdate(true)}
+        onDownloadUpdate={(update) => {
+          const url = update.downloadUrl || update.releaseUrl;
+          void api?.openExternal(url);
+        }}
+        onDismissUpdate={() => setUpdateDismissed(true)}
         onOpenExternal={(url) => void api?.openExternal(url)}
       />
     );
@@ -560,6 +799,19 @@ function App() {
         </nav>
 
         <div className="sidebar-foot">
+          {!brewMissing && !updateDismissed && appUpdate?.updateAvailable && (
+            <UpdateBanner
+              update={appUpdate}
+              checking={checkingUpdate}
+              onCheck={() => void checkAppUpdate(true)}
+              onDownload={(update) => {
+                const url = update.downloadUrl || update.releaseUrl;
+                void api?.openExternal(url);
+              }}
+              onDismiss={() => setUpdateDismissed(true)}
+            />
+          )}
+
           <ThemeToggle value={themePreference} onChange={setThemePreference} />
 
           <button
@@ -573,6 +825,24 @@ function App() {
             Refresh catalog
           </button>
 
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={Boolean(brewMissing)}
+            onClick={() => setPaletteOpen(true)}
+            title="Command palette (⌘K)"
+          >
+            <Search size={16} />
+            Commands ⌘K
+          </button>
+
+          {queuedKeys.size > 0 && (
+            <p className="queue-status">
+              Queue: {queuedKeys.size + busyKeys.size} package
+              {queuedKeys.size + busyKeys.size === 1 ? "" : "s"}
+            </p>
+          )}
+
           <ActionLog lines={log} onClear={() => setLog([])} />
         </div>
       </aside>
@@ -583,12 +853,13 @@ function App() {
             <div className="search glass-pill">
               <Search size={16} />
               <input
+                ref={searchInputRef}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setActiveCollectionId(null);
                 }}
-                placeholder="Search apps & formulae"
+                placeholder="Search apps & formulae  (/)"
                 aria-label="Search"
               />
             </div>
@@ -630,11 +901,18 @@ function App() {
           }
           similar={similarForSelected}
           pinned={pinnedIds.has(selected.id)}
-          busy={busyId === selected.id || updatingIds.has(packageKey(selected))}
+          busy={
+            busyId === selected.id ||
+            busyKeys.has(packageKey(selected)) ||
+            updatingIds.has(packageKey(selected))
+          }
+          diskBytes={diskUsage[packageKey(selected)]}
           onClose={() => setSelected(null)}
           onAction={runAction}
           onOpenExternal={(url) => void api?.openExternal(url)}
           onOpenPackage={(pkg) => setSelected(pkg)}
+          onOpenApp={(pkg) => void openInstalledApp(pkg)}
+          onCopyInstall={(pkg) => void copyInstallCommand(pkg)}
           onTogglePin={
             api
               ? async (pkg, pin) => {
@@ -659,6 +937,13 @@ function App() {
           }
         />
       )}
+
+      <CommandPalette
+        open={paletteOpen}
+        packages={enriched}
+        onClose={() => setPaletteOpen(false)}
+        onRun={handlePaletteAction}
+      />
     </div>
   );
 }

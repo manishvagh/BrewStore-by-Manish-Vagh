@@ -7,6 +7,8 @@ interface Props {
   category: Category;
   packages: BrewPackage[];
   busyId: string | null;
+  busyKeys?: Set<string>;
+  queuedKeys?: Set<string>;
   onBack: () => void;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
@@ -16,6 +18,8 @@ export function CategoryDetail({
   category,
   packages,
   busyId,
+  busyKeys,
+  queuedKeys,
   onBack,
   onOpen,
   onAction,
@@ -37,6 +41,8 @@ export function CategoryDetail({
         onOpen={onOpen}
         onAction={onAction}
         busyId={busyId}
+        busyKeys={busyKeys}
+        queuedKeys={queuedKeys}
       />
       {packages.length > 200 && (
         <p className="hint">Showing first 200 — refine with search.</p>
