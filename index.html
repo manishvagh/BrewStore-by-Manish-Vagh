@@ -4,11 +4,26 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
       content="BrewStore — App Store–style GUI for Homebrew. Developed by Manish Vagh."
     />
     <title>BrewStore</title>
+    <script>
+      {
+        const stored = localStorage.getItem("brewstore-color-scheme");
+        const preference =
+          stored === "light" || stored === "dark" || stored === "system"
+            ? stored
+            : "system";
+        const content = preference === "system" ? "light dark" : preference;
+        const meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.setAttribute("content", content);
+        document.documentElement.dataset.theme = preference;
+        document.documentElement.style.colorScheme = content;
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

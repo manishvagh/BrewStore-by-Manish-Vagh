@@ -18,6 +18,8 @@ import { PackageDetail } from "./components/PackageDetail";
 import { CreditsView } from "./components/CreditsView";
 import { UpdatesView } from "./components/UpdatesView";
 import { ActionLog } from "./components/ActionLog";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { useTheme } from "./hooks/useTheme";
 import "./App.css";
 
 type NavId = "discover" | "categories" | "installed" | "updates" | "credits";
@@ -31,6 +33,7 @@ const NAV: { id: NavId; label: string; icon: typeof Compass }[] = [
 ];
 
 function App() {
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme();
   const [nav, setNav] = useState<NavId>("discover");
   const [packages, setPackages] = useState<BrewPackage[]>([]);
   const [installed, setInstalled] = useState<InstalledMap>({});
@@ -390,6 +393,8 @@ function App() {
         </nav>
 
         <div className="sidebar-foot">
+          <ThemeToggle value={themePreference} onChange={setThemePreference} />
+
           <button
             type="button"
             className="ghost-btn"

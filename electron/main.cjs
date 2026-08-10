@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, nativeTheme } = require("electron");
 const path = require("node:path");
 const brew = require("./brew.cjs");
 const icons = require("./icons.cjs");
@@ -6,9 +6,33 @@ const icons = require("./icons.cjs");
 let mainWindow = null;
 let brewPathPromise = null;
 
+const WINDOW_BG = {
+  light: "#e8eef5",
+  dark: "#0d121c",
+};
+
 function getBrewPath() {
   if (!brewPathPromise) brewPathPromise = brew.resolveBrew();
   return brewPathPromise;
+}
+
+function applyNativeTheme(preference) {
+  const source =
+    preference === "light" || preference === "dark" || preference === "system"
+      ? preference
+      : "system";
+  nativeTheme.themeSource = source;
+  const backgroundColor = nativeTheme.shouldUseDarkColors
+    ? WINDOW_BG.dark
+    : WINDOW_BG.light;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setBackgroundColor(backgroundColor);
+  }
+  return {
+    ok: true,
+    themeSource: nativeTheme.themeSource,
+    shouldUseDarkColors: nativeTheme.shouldUseDarkColors,
+  };
 }
 
 function createWindow() {
@@ -19,7 +43,9 @@ function createWindow() {
     minHeight: 640,
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 18 },
-    backgroundColor: "#e8eef5",
+    backgroundColor: nativeTheme.shouldUseDarkColors
+      ? WINDOW_BG.dark
+      : WINDOW_BG.light,
     icon: path.join(__dirname, "icon.png"),
     show: false,
     webPreferences: {
@@ -130,4 +156,13 @@ ipcMain.handle("shell:open-external", async (_event, url) => {
 ipcMain.handle("icons:resolve", async (_event, packages) => {
   if (!Array.isArray(packages)) return {};
   return icons.resolveIcons(app.getPath("userData"), packages.slice(0, 40));
+});
+
+ipcMain.handle("theme:set", async (_event, preference) => applyNativeTheme(preference));
+
+nativeTheme.on("updated", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.setBackgroundColor(
+    nativeTheme.shouldUseDarkColors ? WINDOW_BG.dark : WINDOW_BG.light,
+  );
 });
