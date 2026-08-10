@@ -77,17 +77,6 @@ async function probeBrew() {
   }
 }
 
-async function openBrewInstallerInTerminal() {
-  const escaped = BREW_INSTALL_SCRIPT.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  await execFileAsync("osascript", [
-    "-e",
-    `tell application "Terminal" to do script "${escaped}"`,
-    "-e",
-    'tell application "Terminal" to activate',
-  ]);
-  return { ok: true };
-}
-
 async function writeAskPassHelper(dir) {
   const askPassPath = path.join(dir, "brewstore-askpass");
   const sudoShimPath = path.join(dir, "sudo");
@@ -465,7 +454,6 @@ module.exports = {
   findBrewPath,
   probeBrew,
   installHomebrew,
-  openBrewInstallerInTerminal,
   BREW_INSTALL_SCRIPT,
   BREW_SITE,
   loadCatalog,
