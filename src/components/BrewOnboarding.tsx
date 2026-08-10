@@ -1,110 +1,85 @@
-import { useState } from "react";
-import { Check, Copy, ExternalLink, Terminal } from "lucide-react";
-
-export interface BrewMissingInfo {
-  installCommand: string;
-  brewSite: string;
-}
+import { useEffect, useRef } from "react";
+import { ExternalLink, LoaderCircle } from "lucide-react";
 
 interface Props {
-  info: BrewMissingInfo;
+  installing: boolean;
   checking: boolean;
-  checkError: string | null;
-  onOpenInstaller: () => Promise<void>;
-  onCopyCommand: () => Promise<void>;
+  logLines: string[];
+  error: string | null;
+  onInstall: () => Promise<void>;
   onOpenSite: () => void;
-  onRecheck: () => Promise<void>;
 }
 
 export function BrewOnboarding({
-  info,
+  installing,
   checking,
-  checkError,
-  onOpenInstaller,
-  onCopyCommand,
+  logLines,
+  error,
+  onInstall,
   onOpenSite,
-  onRecheck,
 }: Props) {
-  const [copied, setCopied] = useState(false);
-  const [opening, setOpening] = useState(false);
-  const [openError, setOpenError] = useState<string | null>(null);
+  const logRef = useRef<HTMLPreElement>(null);
+  const startedRef = useRef(false);
 
-  async function handleInstall() {
-    setOpening(true);
-    setOpenError(null);
-    try {
-      await onOpenInstaller();
-    } catch (err) {
-      setOpenError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setOpening(false);
-    }
-  }
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void onInstall();
+  }, [onInstall]);
 
-  async function handleCopy() {
-    await onCopyCommand();
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  }
+  useEffect(() => {
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [logLines]);
+
+  const busy = installing || checking;
 
   return (
     <section className="onboarding" aria-labelledby="brew-onboard-title">
       <div className="onboarding-card glass-card">
-        <p className="onboarding-kicker">Setup required</p>
-        <h1 id="brew-onboard-title">Install Homebrew to use BrewStore</h1>
+        <p className="onboarding-kicker">BrewStore setup</p>
+        <h1 id="brew-onboard-title">
+          {busy ? "Finishing setup…" : error ? "Setup needs attention" : "Almost ready"}
+        </h1>
         <p className="onboarding-lead">
-          BrewStore is a visual front end for Homebrew. It does not replace
-          Homebrew — once brew is on this Mac, you can discover and manage the
-          full catalog here.
+          BrewStore needs Homebrew on this Mac. Setup runs inside BrewStore —
+          macOS may ask for your password once. No Terminal window is opened.
         </p>
 
-        <ol className="onboarding-steps">
-          <li>Install Homebrew (opens Terminal with the official installer).</li>
-          <li>Follow the prompts — you may need your Mac password.</li>
-          <li>Come back here and tap Continue.</li>
-        </ol>
-
-        <div className="onboarding-actions">
-          <button
-            type="button"
-            className="btn primary"
-            disabled={opening || checking}
-            onClick={() => void handleInstall()}
-          >
-            <Terminal size={16} aria-hidden />
-            {opening ? "Opening Terminal…" : "Install Homebrew"}
-          </button>
-          <button
-            type="button"
-            className="btn soft"
-            disabled={checking}
-            onClick={() => void onRecheck()}
-          >
-            {checking ? "Checking…" : "I’ve installed it — Continue"}
-          </button>
+        <div className="onboarding-status" aria-live="polite">
+          {busy && (
+            <p className="onboarding-busy">
+              <LoaderCircle size={16} className="spin" aria-hidden />
+              {installing ? "Installing Homebrew…" : "Checking Homebrew…"}
+            </p>
+          )}
+          <pre ref={logRef} className="onboarding-log">
+            {logLines.length ? logLines.join("") : "Preparing Homebrew setup…\n"}
+          </pre>
         </div>
 
-        {(openError || checkError) && (
+        {error && (
           <p className="onboarding-error" role="alert">
-            {openError || checkError}
+            {error}
           </p>
         )}
 
-        <div className="onboarding-command">
-          <code>{info.installCommand}</code>
-          <button
-            type="button"
-            className="btn soft onboarding-copy"
-            onClick={() => void handleCopy()}
-          >
-            {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
-            {copied ? "Copied" : "Copy"}
+        <div className="onboarding-actions">
+          {error && (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={busy}
+              onClick={() => void onInstall()}
+            >
+              Try again
+            </button>
+          )}
+          <button type="button" className="link-btn onboarding-site" onClick={onOpenSite}>
+            About Homebrew <ExternalLink size={14} />
           </button>
         </div>
-
-        <button type="button" className="link-btn onboarding-site" onClick={onOpenSite}>
-          Official instructions on brew.sh <ExternalLink size={14} />
-        </button>
       </div>
     </section>
   );

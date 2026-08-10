@@ -115,9 +115,13 @@ ipcMain.handle("brew:recheck", async () => {
   return brew.probeBrew();
 });
 
-ipcMain.handle("brew:open-installer", async () => {
-  await brew.openBrewInstallerInTerminal();
-  return { ok: true };
+ipcMain.handle("brew:install-homebrew", async () => {
+  resetBrewPathCache();
+  await brew.installHomebrew((text) => {
+    sendProgress("brew:progress", { action: "setup-homebrew", text });
+  });
+  resetBrewPathCache();
+  return brew.probeBrew();
 });
 
 ipcMain.handle("clipboard:write-text", async (_event, text) => {

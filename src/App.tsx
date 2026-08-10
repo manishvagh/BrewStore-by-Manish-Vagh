@@ -33,9 +33,7 @@ const NAV: { id: NavId; label: string; icon: typeof Compass }[] = [
   { id: "credits", label: "Credits", icon: Info },
 ];
 
-const FALLBACK_BREW_MISSING: Pick<BrewStatus, "installCommand" | "brewSite"> = {
-  installCommand:
-    '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+const FALLBACK_BREW_MISSING: Pick<BrewStatus, "brewSite"> = {
   brewSite: "https://brew.sh",
 };
 
@@ -47,11 +45,12 @@ function App() {
   const [outdated, setOutdated] = useState<OutdatedMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [brewMissing, setBrewMissing] = useState<Pick<
-    BrewStatus,
-    "installCommand" | "brewSite"
-  > | null>(null);
+  const [brewMissing, setBrewMissing] = useState<Pick<BrewStatus, "brewSite"> | null>(
+    null,
+  );
   const [checkingBrew, setCheckingBrew] = useState(false);
+  const [installingBrew, setInstallingBrew] = useState(false);
+  const [brewSetupLog, setBrewSetupLog] = useState<string[]>([]);
   const [brewCheckError, setBrewCheckError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<BrewPackage | null>(null);
@@ -85,7 +84,6 @@ function App() {
         const status = await api.getBrewStatus();
         if (!status.installed) {
           setBrewMissing({
-            installCommand: status.installCommand || FALLBACK_BREW_MISSING.installCommand,
             brewSite: status.brewSite || FALLBACK_BREW_MISSING.brewSite,
           });
           setPackages([]);
@@ -126,36 +124,44 @@ function App() {
   useEffect(() => {
     if (!api) return;
     return api.onProgress((data) => {
-      const text = data.text.trim();
-      if (!text) return;
-      setLog((prev) => [...prev.slice(-100), text]);
+      const text = data.text.trimEnd();
+      if (!text && !data.text) return;
+      if (data.action === "setup-homebrew") {
+        setBrewSetupLog((prev) => [...prev.slice(-200), data.text]);
+        return;
+      }
+      const line = data.text.trim();
+      if (!line) return;
+      setLog((prev) => [...prev.slice(-100), line]);
     });
   }, [api]);
 
-  async function handleRecheckBrew() {
+  const handleInstallHomebrew = useCallback(async () => {
     if (!api) return;
-    setCheckingBrew(true);
+    setInstallingBrew(true);
     setBrewCheckError(null);
+    setBrewSetupLog([]);
     try {
-      const status = await api.recheckBrew();
+      const status = await api.installHomebrew();
       if (!status.installed) {
         setBrewMissing({
-          installCommand: status.installCommand || FALLBACK_BREW_MISSING.installCommand,
           brewSite: status.brewSite || FALLBACK_BREW_MISSING.brewSite,
         });
         setBrewCheckError(
-          "Homebrew still isn’t available. Finish the Terminal install, then try again.",
+          "Homebrew setup didn’t complete. Try again, or visit brew.sh.",
         );
         return;
       }
       setBrewMissing(null);
+      setCheckingBrew(true);
       await loadAll(true);
     } catch (err) {
       setBrewCheckError(err instanceof Error ? err.message : String(err));
     } finally {
+      setInstallingBrew(false);
       setCheckingBrew(false);
     }
-  }
+  }, [api, loadAll]);
 
   const enriched = useMemo(() => {
     return packages.map((pkg) => {
@@ -318,21 +324,14 @@ function App() {
     if (brewMissing) {
       return (
         <BrewOnboarding
-          info={brewMissing}
+          installing={installingBrew}
           checking={checkingBrew}
-          checkError={brewCheckError}
-          onOpenInstaller={async () => {
-            if (!api) throw new Error("Electron required");
-            await api.openBrewInstaller();
-          }}
-          onCopyCommand={async () => {
-            if (!api) return;
-            await api.writeClipboardText(brewMissing.installCommand);
-          }}
+          logLines={brewSetupLog}
+          error={brewCheckError}
+          onInstall={handleInstallHomebrew}
           onOpenSite={() => {
             void api?.openExternal(brewMissing.brewSite);
           }}
-          onRecheck={handleRecheckBrew}
         />
       );
     }

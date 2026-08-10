@@ -68,7 +68,7 @@ export interface BrewStoreApi {
   getBrewInfo: () => Promise<{ brewPath: string; version: string }>;
   getBrewStatus: () => Promise<BrewStatus>;
   recheckBrew: () => Promise<BrewStatus>;
-  openBrewInstaller: () => Promise<{ ok: boolean }>;
+  installHomebrew: () => Promise<BrewStatus>;
   writeClipboardText: (text: string) => Promise<{ ok: boolean }>;
   loadCatalog: (opts?: { force?: boolean }) => Promise<CatalogPayload>;
   getInstalled: () => Promise<InstalledMap>;
