@@ -12,5 +12,4 @@ npm-debug.log*
 build/icon.iconset/
 *.tsbuildinfo
 
-# Local marketing site hosted on manishvagh.in — never commit or push
 /website/
