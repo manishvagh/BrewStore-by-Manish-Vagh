@@ -8,6 +8,7 @@ export type PaletteAction =
   | { kind: "nav"; id: string; label: string }
   | { kind: "focus-search"; label: string }
   | { kind: "check-update"; label: string }
+  | { kind: "donate"; label: string }
   | { kind: "pkg"; pkg: BrewPackage; action: "open" | "install" | "upgrade" | "copy" };
 
 interface Props {
@@ -26,6 +27,7 @@ const NAV_ACTIONS: PaletteAction[] = [
   { kind: "nav", id: "credits", label: "Go to Credits" },
   { kind: "focus-search", label: "Focus search" },
   { kind: "check-update", label: "Check for BrewStore updates" },
+  { kind: "donate", label: "Donate with PayPal" },
 ];
 
 export function CommandPalette({ open, packages, onClose, onRun }: Props) {

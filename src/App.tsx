@@ -43,6 +43,7 @@ import {
 } from "./discovery/search";
 import { resolveTrending } from "./discovery/trending";
 import { brewInstallCommand } from "./lib/format";
+import { PAYPAL_DONATE_URL } from "./lib/donate";
 import "./App.css";
 
 type NavId =
@@ -550,6 +551,10 @@ function App() {
     if (action.kind === "check-update") {
       void checkAppUpdate(true);
       setNav("credits");
+      return;
+    }
+    if (action.kind === "donate") {
+      void api?.openExternal(PAYPAL_DONATE_URL);
       return;
     }
     if (action.kind === "pkg") {
