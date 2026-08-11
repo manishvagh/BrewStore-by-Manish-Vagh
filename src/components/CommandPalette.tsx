@@ -27,7 +27,7 @@ const NAV_ACTIONS: PaletteAction[] = [
   { kind: "nav", id: "credits", label: "Go to Credits" },
   { kind: "focus-search", label: "Focus search" },
   { kind: "check-update", label: "Check for BrewStore updates" },
-  { kind: "donate", label: "Donate with PayPal" },
+  { kind: "donate", label: "Support with PayPal" },
 ];
 
 export function CommandPalette({ open, packages, onClose, onRun }: Props) {

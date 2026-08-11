@@ -1,3 +1,4 @@
 # Shown as Sponsor on the GitHub repo sidebar.
+# Use Pay Now (not Donate) — PayPal India blocks donation links.
 custom:
-  - https://www.paypal.com/donate/?business=vagh33%40gmail.com&no_recurring=0&item_name=BrewStore%20by%20Manish%20Vagh&currency_code=USD
+  - "https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=vagh33%40gmail.com&item_name=BrewStore%20support&currency_code=USD"

@@ -43,7 +43,7 @@ import {
 } from "./discovery/search";
 import { resolveTrending } from "./discovery/trending";
 import { brewInstallCommand } from "./lib/format";
-import { PAYPAL_DONATE_URL } from "./lib/donate";
+import { PAYPAL_SUPPORT_URL } from "./lib/donate";
 import "./App.css";
 
 type NavId =
@@ -554,7 +554,7 @@ function App() {
       return;
     }
     if (action.kind === "donate") {
-      void api?.openExternal(PAYPAL_DONATE_URL);
+      void api?.openExternal(PAYPAL_SUPPORT_URL);
       return;
     }
     if (action.kind === "pkg") {
