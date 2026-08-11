@@ -10,8 +10,9 @@ Inspired by common open-source brand practice (including GitLab’s trademark mo
 
 The official BrewStore project is only:
 
+- Site: [brewstore.app](https://brewstore.app/)
 - Source: [github.com/manishvagh/BrewStore-by-Manish-Vagh](https://github.com/manishvagh/BrewStore-by-Manish-Vagh)
-- Author site: [manishvagh.in](https://manishvagh.in/)
+- Author: [manishvagh.in](https://manishvagh.in/)
 - Releases published by **@manishvagh** from that repository
 
 Anything else is a fork, remix, or third-party build — not the official BrewStore.
