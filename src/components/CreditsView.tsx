@@ -1,5 +1,6 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Heart } from "lucide-react";
 import { UpdateBanner } from "./UpdateBanner";
+import { PAYPAL_DONATE_URL } from "../lib/donate";
 import type { AppUpdateInfo } from "../types";
 
 interface Props {
@@ -68,6 +69,23 @@ export function CreditsView({
         >
           Official GitHub repository <ExternalLink size={14} />
         </button>
+      </div>
+
+      <div className="credit-panel">
+        <h2>Support</h2>
+        <p>
+          BrewStore is free — no account, no ads. If it saves you time, an
+          optional PayPal donation helps cover Apple developer, hosting, and
+          build costs.
+        </p>
+        <button
+          type="button"
+          className="btn soft donate-btn"
+          onClick={() => onOpenExternal(PAYPAL_DONATE_URL)}
+        >
+          <Heart size={16} /> Donate with PayPal
+        </button>
+        <p className="muted">Optional — every feature stays free either way.</p>
       </div>
 
       <div className="credit-panel">
