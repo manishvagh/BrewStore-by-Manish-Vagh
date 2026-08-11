@@ -247,7 +247,7 @@ Direct commits to `main` are not allowed. Open a pull request and wait for revie
 
 ## Support
 
-BrewStore is free. Optional [PayPal donations](https://www.paypal.com/donate/?business=vagh33%40gmail.com&no_recurring=0&item_name=BrewStore%20by%20Manish%20Vagh&currency_code=USD) help cover Apple developer and hosting costs. Every feature stays free either way.
+BrewStore is free. Optional [PayPal support](https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=vagh33%40gmail.com&item_name=BrewStore%20support&currency_code=USD) helps cover Apple developer and hosting costs. Every feature stays free either way.
 
 ---
 
