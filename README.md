@@ -15,10 +15,10 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 
 **Website:** [brewstore.app](https://brewstore.app/)
 
-**Latest release (macOS DMG):**  
-[Download BrewStore for Mac](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest)
+**Latest release:**  
+[Download the DMG](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest) or the [`.app` zip](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest).
 
-Or open [Releases](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases) and grab the `.dmg` for your Mac (Apple Silicon or Intel).
+Or open [Releases](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases) and grab the `.dmg` or `.zip` (`BrewStore.app` inside) for your Mac (Apple Silicon or Intel).
 
 After install, if macOS Gatekeeper blocks the app, see [First launch / Gatekeeper](#first-launch--gatekeeper) below.
 
@@ -176,7 +176,7 @@ npm run dist:dmg
 open release/BrewStore-*-arm64.dmg
 ```
 
-`npm run dist` builds the `.app` only; `npm run dist:dmg` also produces the distributable disk image.
+`npm run dist` builds the `.app` only; `npm run dist:dmg` produces the disk image; `npm run dist:zip` zips `BrewStore.app` for a direct download.
 
 On Intel Macs the artifact arch may be `x64` instead of `arm64`.
 
@@ -202,6 +202,7 @@ xattr -cr /Applications/BrewStore.app
 | `npm run build` | Typecheck and build the renderer |
 | `npm run dist` | Build renderer and package the macOS `.app` |
 | `npm run dist:dmg` | Build renderer and package a macOS `.dmg` for distribution |
+| `npm run dist:zip` | Build renderer and zip `BrewStore.app` for distribution |
 | `npm run install:mac` | Package, install into `/Applications`, set up Homebrew if missing |
 | `npm start` | Run Electron against the built `dist/` folder |
 | `npm run lint` | Run Oxlint |

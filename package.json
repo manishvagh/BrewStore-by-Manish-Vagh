@@ -13,6 +13,7 @@
     "start": "cross-env ELECTRON_RUN_AS_NODE= electron .",
     "dist": "npm run build && cross-env ELECTRON_RUN_AS_NODE= electron-builder --mac dir",
     "dist:dmg": "npm run build && cross-env ELECTRON_RUN_AS_NODE= electron-builder --mac dmg",
+    "dist:zip": "npm run build && cross-env ELECTRON_RUN_AS_NODE= electron-builder --mac zip",
     "install:mac": "node scripts/install-mac.cjs",
     "preview": "vite preview",
     "lint": "oxlint"
@@ -33,7 +34,8 @@
       "category": "public.app-category.utilities",
       "target": [
         "dir",
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "icon": "build/icon.icns",
       "identity": null,
