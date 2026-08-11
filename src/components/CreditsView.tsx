@@ -17,7 +17,8 @@ interface Props {
 
 const OFFICIAL_REPO =
   "https://github.com/manishvagh/BrewStore-by-Manish-Vagh";
-const OFFICIAL_SITE = "https://manishvagh.in/";
+const OFFICIAL_SITE = "https://brewstore.app/";
+const AUTHOR_SITE = "https://manishvagh.in/";
 
 export function CreditsView({
   appVersion,
@@ -59,6 +60,13 @@ export function CreditsView({
           type="button"
           className="link-btn"
           onClick={() => onOpenExternal(OFFICIAL_SITE)}
+        >
+          brewstore.app <ExternalLink size={14} />
+        </button>
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() => onOpenExternal(AUTHOR_SITE)}
         >
           manishvagh.in <ExternalLink size={14} />
         </button>

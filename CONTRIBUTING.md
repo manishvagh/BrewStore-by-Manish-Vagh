@@ -25,5 +25,5 @@ Repository admins may bypass required reviews when necessary (for example, urgen
 BrewStore follows a GitLab-style model: **source is open; brand identity is protected.**
 
 - Do not remove or dilute “BrewStore”, “by Manish Vagh”, Credits attribution, `NOTICE`, or `TRADEMARKS.md` in PRs to this repository.
-- Do not replace official links (this GitHub repo, manishvagh.in) with third-party “official” downloads.
+- Do not replace official links (this GitHub repo, brewstore.app, manishvagh.in) with third-party “official” downloads.
 - External forks may modify the UI, but must follow [TRADEMARKS.md](./TRADEMARKS.md) (different product name; no impersonation of the official app).

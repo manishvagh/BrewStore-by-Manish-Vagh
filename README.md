@@ -2,8 +2,8 @@
 
 Native macOS desktop app for **discovering and managing** [Homebrew](https://brew.sh) packages — casks and formulae — with an App Store–style interface.
 
-**Author:** Manish Vagh  
-**Official site:** [manishvagh.in](https://manishvagh.in/) · **Source:** [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh)
+**Author:** [Manish Vagh](https://manishvagh.in/)  
+**Official site:** [brewstore.app](https://brewstore.app/) · **Source:** [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh)
 
 Homebrew’s catalog is huge. Nobody remembers every package — or even knows most of them exist. BrewStore shows the full index visually so you can browse, search, and stumble into tools you’d never type into Terminal.
 
@@ -12,6 +12,8 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 ---
 
 ## Download
+
+**Website:** [brewstore.app](https://brewstore.app/)
 
 **Latest release (macOS DMG):**  
 [Download BrewStore for Mac](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest)
@@ -259,7 +261,7 @@ BrewStore is free. Optional [PayPal support](https://www.paypal.com/cgi-bin/webs
 
 BrewStore is not affiliated with Apple or the App Store.
 
-**Official sources only:** [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh) · [manishvagh.in](https://manishvagh.in/)
+**Official sources only:** [brewstore.app](https://brewstore.app/) · [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh) · [Manish Vagh](https://manishvagh.in/)
 
 ---
 
