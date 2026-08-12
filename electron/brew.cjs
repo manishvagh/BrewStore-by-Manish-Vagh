@@ -1,10 +1,76 @@
 const { spawn, execFile } = require("node:child_process");
 const { promisify } = require("node:util");
 const fs = require("node:fs/promises");
+const os = require("node:os");
 const path = require("node:path");
 const https = require("node:https");
 
 const execFileAsync = promisify(execFile);
+
+function isRealUsername(name) {
+  return typeof name === "string" && name.length > 0 && !/^\d+$/.test(name);
+}
+
+function resolveIdentity() {
+  let home = process.env.HOME;
+  let username = process.env.USER || process.env.LOGNAME;
+
+  try {
+    const info = os.userInfo();
+    if (info.homedir) home = home || info.homedir;
+    if (isRealUsername(info.username)) username = info.username;
+  } catch {
+    // getpwuid can fail when the process uid has no passwd entry
+    // (GUI apps, sandboxes). Homebrew 6+ then crashes in Dir.home.
+  }
+
+  if (!home) {
+    const guessed = isRealUsername(username) ? `/Users/${username}` : "";
+    home = guessed || os.homedir() || os.tmpdir();
+  }
+
+  if (!isRealUsername(username)) {
+    const match = String(home).match(/^\/Users\/([^/]+)/);
+    if (match) username = match[1];
+  }
+
+  return {
+    home,
+    username: isRealUsername(username) ? username : "user",
+  };
+}
+
+// Finder-launched GUI apps can inherit USER=<numeric uid>, which breaks Homebrew 6.
+const bootIdentity = resolveIdentity();
+process.env.HOME = bootIdentity.home;
+process.env.USER = bootIdentity.username;
+process.env.LOGNAME = bootIdentity.username;
+
+function brewEnv(overrides = {}) {
+  const { home, username } = resolveIdentity();
+  return {
+    ...process.env,
+    HOME: home,
+    USER: username,
+    LOGNAME: username,
+    TMPDIR: process.env.TMPDIR || os.tmpdir(),
+    PATH: [
+      "/opt/homebrew/bin",
+      "/opt/homebrew/sbin",
+      "/usr/local/bin",
+      "/usr/bin",
+      "/bin",
+      "/usr/sbin",
+      "/sbin",
+      process.env.PATH || "",
+    ].join(":"),
+    HOMEBREW_NO_AUTO_UPDATE: "1",
+    HOMEBREW_NO_ENV_HINTS: "1",
+    HOMEBREW_COLOR: "0",
+    HOMEBREW_NO_ANALYTICS: "1",
+    ...overrides,
+  };
+}
 
 const BREW_CANDIDATES = [
   "/opt/homebrew/bin/brew",
@@ -28,12 +94,12 @@ async function findBrewPath() {
   for (const candidate of BREW_CANDIDATES) {
     try {
       if (candidate === "brew") {
-        await execFileAsync("brew", ["--version"]);
+        await execFileAsync("brew", ["--version"], { env: brewEnv() });
         return "brew";
       }
       await fs.access(candidate);
       // Confirm the binary actually runs (stale path / broken install).
-      await execFileAsync(candidate, ["--version"]);
+      await execFileAsync(candidate, ["--version"], { env: brewEnv() });
       return candidate;
     } catch {
       continue;
@@ -130,16 +196,12 @@ async function installHomebrew(onData) {
             "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash",
           ],
           {
-            env: {
-              ...process.env,
+            env: brewEnv({
               PATH: `${binDir}:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`,
               SUDO_ASKPASS: askPassPath,
               NONINTERACTIVE: "1",
               CI: "1",
-              HOMEBREW_NO_ANALYTICS: "1",
-              HOMEBREW_NO_AUTO_UPDATE: "1",
-              HOMEBREW_COLOR: "0",
-            },
+            }),
           },
         );
 
@@ -183,12 +245,7 @@ async function installHomebrew(onData) {
 function runBrew(brewPath, args, { onData, allowFail = false } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(brewPath, args, {
-      env: {
-        ...process.env,
-        HOMEBREW_NO_AUTO_UPDATE: "1",
-        HOMEBREW_NO_ENV_HINTS: "1",
-        HOMEBREW_COLOR: "0",
-      },
+      env: brewEnv(),
     });
 
     let stdout = "";
