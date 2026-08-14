@@ -6,6 +6,7 @@ export interface Category {
   blurb: string;
   keywords: string[];
   accent: string;
+  cues: string[];
 }
 
 export const CATEGORIES: Category[] = [
@@ -37,6 +38,7 @@ export const CATEGORIES: Category[] = [
       "api",
     ],
     accent: "#0a7ea4",
+    cues: ["IDE", "CLI", "Git"],
   },
   {
     id: "productivity",
@@ -55,6 +57,7 @@ export const CATEGORIES: Category[] = [
       "kanban",
     ],
     accent: "#2f6fed",
+    cues: ["Notes", "Tasks", "Focus"],
   },
   {
     id: "utilities",
@@ -75,6 +78,7 @@ export const CATEGORIES: Category[] = [
       "launcher",
     ],
     accent: "#5b6b7c",
+    cues: ["Files", "Clipboard", "System"],
   },
   {
     id: "graphics-design",
@@ -95,6 +99,7 @@ export const CATEGORIES: Category[] = [
       "icon",
     ],
     accent: "#c2410c",
+    cues: ["Draw", "Type", "Layout"],
   },
   {
     id: "photo-video",
@@ -114,6 +119,7 @@ export const CATEGORIES: Category[] = [
       "gif",
     ],
     accent: "#a21caf",
+    cues: ["Camera", "Edit", "Record"],
   },
   {
     id: "music",
@@ -131,6 +137,7 @@ export const CATEGORIES: Category[] = [
       "equalizer",
     ],
     accent: "#be185d",
+    cues: ["Play", "DAW", "Audio"],
   },
   {
     id: "browsers",
@@ -138,6 +145,7 @@ export const CATEGORIES: Category[] = [
     blurb: "Web browsers and browsing tools",
     keywords: ["browser", "web browser", "chromium", "firefox", "safari", "chrome"],
     accent: "#0369a1",
+    cues: ["Chrome", "Firefox", "Web"],
   },
   {
     id: "communication",
@@ -158,6 +166,7 @@ export const CATEGORIES: Category[] = [
       "collaboration",
     ],
     accent: "#0f766e",
+    cues: ["Chat", "Mail", "Meet"],
   },
   {
     id: "security",
@@ -177,13 +186,15 @@ export const CATEGORIES: Category[] = [
       "malware",
     ],
     accent: "#b45309",
+    cues: ["VPN", "Keys", "Privacy"],
   },
   {
     id: "games",
     name: "Games",
     blurb: "Games and gaming utilities",
     keywords: ["game", "gaming", "steam", "emulator", "controller", "minecraft"],
-    accent: "#15803d",
+    accent: "#16a34a",
+    cues: ["Play", "Emulate", "Steam"],
   },
   {
     id: "education",
@@ -191,6 +202,7 @@ export const CATEGORIES: Category[] = [
     blurb: "Learning and reference",
     keywords: ["learn", "education", "tutorial", "course", "dictionary", "language learning"],
     accent: "#4f46e5",
+    cues: ["Learn", "Read", "Courses"],
   },
   {
     id: "science",
@@ -208,14 +220,16 @@ export const CATEGORIES: Category[] = [
       "ai ",
       "neural",
     ],
-    accent: "#047857",
+    accent: "#0e7490",
+    cues: ["Data", "Lab", "Math"],
   },
   {
     id: "finance",
     name: "Finance",
     blurb: "Money, crypto, and accounting",
     keywords: ["finance", "banking", "crypto", "bitcoin", "accounting", "budget", "invoice"],
-    accent: "#0f766e",
+    accent: "#ca8a04",
+    cues: ["Money", "Crypto", "Books"],
   },
   {
     id: "entertainment",
@@ -223,6 +237,7 @@ export const CATEGORIES: Category[] = [
     blurb: "Streaming, reading, and leisure",
     keywords: ["entertainment", "streaming", "movie", "tv", "ebook", "reader", "comic"],
     accent: "#9d174d",
+    cues: ["Stream", "Read", "Watch"],
   },
 ];
 
