@@ -253,10 +253,8 @@ ipcMain.handle("brew:freshness", async () => {
 
 ipcMain.handle("brew:install-plan", async (_event, pkg) => {
   const brewPath = await getBrewPath();
-  return locked({ action: "install-plan", pkgId: jobPkgId(pkg) }, async () => {
-    const installed = await brew.getInstalled(brewPath);
-    return brew.getInstallPlan(brewPath, pkg, installed);
-  });
+  const installed = await brew.getInstalled(brewPath);
+  return brew.getInstallPlan(brewPath, pkg, installed);
 });
 
 ipcMain.handle("brew:uninstall-plan", async (_event, pkg) => {
@@ -333,15 +331,18 @@ ipcMain.handle("app:check-update", async () => {
 
 ipcMain.handle("app:apply-update", async (_event, info) => {
   const url = info?.zipUrl || info?.downloadUrl || info?.dmgUrl;
-  await locked({ action: "app-update" }, async (onData) => {
-    await updater.applyAppUpdate({
-      downloadUrl: url,
-      onData,
-    });
+  await updater.applyAppUpdate({
+    downloadUrl: url,
+    onData: (text) => {
+      sendProgress("brew:progress", {
+        action: "app-update",
+        text,
+      });
+    },
   });
   setTimeout(() => {
     app.quit();
-  }, 800);
+  }, 400);
   return { ok: true };
 });
 

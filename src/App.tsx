@@ -100,7 +100,7 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.3.1");
+  const [appVersion, setAppVersion] = useState("1.3.2");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
@@ -133,7 +133,7 @@ function App() {
 
   const loadAll = useCallback(
     async (force = false) => {
-      setLoading(true);
+      if (!force) setLoading(true);
       setError(null);
       setBrewCheckError(null);
       try {
@@ -717,6 +717,30 @@ function App() {
     setSelected(pkg);
   }
 
+  const loadInstallPlan = useCallback(
+    (pkg: BrewPackage) => {
+      if (!api) return Promise.reject(new Error("Electron required"));
+      return api.getInstallPlan(pkg);
+    },
+    [api],
+  );
+
+  const loadPackageDeps = useCallback(
+    (pkg: BrewPackage) => {
+      if (!api) return Promise.resolve([] as string[]);
+      return api.getDeps(pkg);
+    },
+    [api],
+  );
+
+  const loadPackageDependents = useCallback(
+    (pkg: BrewPackage) => {
+      if (!api) return Promise.resolve([] as string[]);
+      return api.getDependents(pkg);
+    },
+    [api],
+  );
+
   function renderMain() {
     if (loading) {
       return (
@@ -1061,7 +1085,7 @@ function App() {
           onOpenPackage={(pkg) => setSelected(pkg)}
           onOpenApp={(pkg) => void openInstalledApp(pkg)}
           onCopyInstall={(pkg) => void copyInstallCommand(pkg)}
-          loadInstallPlan={api ? (pkg) => api.getInstallPlan(pkg) : undefined}
+          loadInstallPlan={api ? loadInstallPlan : undefined}
           zapDryRun={
             api
               ? async (pkg) => {
@@ -1082,16 +1106,8 @@ function App() {
                 }
               : undefined
           }
-          loadDeps={
-            api
-              ? async (pkg) => api.getDeps(pkg)
-              : undefined
-          }
-          loadDependents={
-            api
-              ? async (pkg) => api.getDependents(pkg)
-              : undefined
-          }
+          loadDeps={api ? loadPackageDeps : undefined}
+          loadDependents={api ? loadPackageDependents : undefined}
         />
       )}
 
