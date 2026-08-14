@@ -464,7 +464,7 @@ input {
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  timeline-scope: --content-scroll;
+  timeline-scope: none;
 }
 
 .topbar {
@@ -537,8 +537,10 @@ input {
   }
 
   .content::-webkit-scrollbar {
+    display: none;
     width: 0;
     height: 0;
+    background: transparent;
   }
 
   .beer-scroll {
@@ -548,34 +550,18 @@ input {
     justify-self: end;
     align-self: stretch;
     z-index: 4;
-    width: 13px;
-    margin: 0.55rem 0.4rem 1.1rem 0;
+    width: 10px;
+    margin: 0.55rem 0.45rem 1.1rem 0;
     pointer-events: none;
   }
 
   .beer-glass {
     position: relative;
     height: 100%;
-    border-radius: 4px 4px 7px 7px;
+    border-radius: 5px;
     overflow: hidden;
-    background: light-dark(rgba(16, 32, 56, 0.08), rgba(255, 255, 255, 0.06));
-    box-shadow:
-      inset 0 0 0 1px light-dark(rgba(16, 32, 56, 0.14), rgba(255, 255, 255, 0.16)),
-      inset -3px 0 5px rgba(255, 255, 255, 0.18);
-    clip-path: polygon(18% 0, 82% 0, 100% 100%, 0 100%);
-  }
-
-  .beer-glass::after {
-    content: "";
-    position: absolute;
-    inset: 8% 58% 8% 12%;
-    border-radius: inherit;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.45),
-      rgba(255, 255, 255, 0.05) 70%
-    );
-    pointer-events: none;
+    background: light-dark(rgba(16, 32, 56, 0.1), rgba(0, 0, 0, 0.28));
+    box-shadow: inset 0 0 0 1px light-dark(rgba(16, 32, 56, 0.12), rgba(255, 255, 255, 0.06));
   }
 
     .beer-scroll .beer-fill {
@@ -583,21 +569,17 @@ input {
       inset: 0;
       transform: translateY(100%);
       background: var(--beer-pour);
+      will-change: transform;
     }
 
     .beer-scroll .beer-foam {
       position: absolute;
-      top: -3px;
-      left: -30%;
-      right: -30%;
-      height: 15px;
-      background:
-        radial-gradient(circle at 22% 70%, #fff 0 36%, transparent 38%),
-        radial-gradient(circle at 55% 40%, #fffaf0 0 34%, transparent 36%),
-        radial-gradient(circle at 82% 65%, #fff 0 32%, transparent 34%),
-        linear-gradient(#fffef8 30%, #f3e2b8 100%);
-      border-radius: 50% 50% 40% 40%;
-      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 10px;
+      background: linear-gradient(#fffef8 20%, #f3e2b8 100%);
+      border-radius: 0 0 40% 40%;
     }
 
     .beer-scroll .beer-bubble {
@@ -633,15 +615,6 @@ input {
       animation-delay: -1.1s;
     }
 
-  @keyframes beer-pour {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
-  }
-
   @keyframes beer-bubble {
     from {
       opacity: 0.15;
@@ -653,17 +626,6 @@ input {
     to {
       opacity: 0;
       transform: translateY(-220%);
-    }
-  }
-
-  @supports (animation-timeline: scroll()) {
-    .content {
-      scroll-timeline: --content-scroll block;
-    }
-
-    .beer-scroll .beer-fill {
-      animation: beer-pour auto linear;
-      animation-timeline: --content-scroll;
     }
   }
 }
