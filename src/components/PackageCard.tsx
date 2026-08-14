@@ -3,6 +3,7 @@ import { PackageIcon } from "./PackageIcon";
 import { VerifiedName } from "./VerifiedName";
 import { formatBytes } from "../lib/format";
 import { isOfficialCurrent, tokenChannel } from "../lib/trust";
+import { BeerMeter } from "./BeerMeter";
 
 interface Props {
   pkg: BrewPackage;
@@ -12,6 +13,7 @@ interface Props {
   queued?: boolean;
   diskBytes?: number | null;
   progressLabel?: string;
+  progress?: number;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenApp?: (pkg: BrewPackage) => void;
@@ -26,6 +28,7 @@ export function PackageCard({
   queued,
   diskBytes,
   progressLabel,
+  progress,
   onOpen,
   onAction,
   onOpenApp,
@@ -34,6 +37,9 @@ export function PackageCard({
   const channel = tokenChannel(pkg.token);
   const official = isOfficialCurrent(pkg);
   const blocked = Boolean(pkg.disabled);
+  const busyLabel =
+    progressLabel ||
+    (pkg.outdated ? "Updating" : pkg.installed ? "Working" : "Installing");
 
   let actionLabel = "Get";
   let action: "install" | "uninstall" | "upgrade" = "install";
@@ -76,10 +82,11 @@ export function PackageCard({
       </div>
       <div className="pkg-actions" onClick={(e) => e.stopPropagation()}>
         {busy ? (
-          <div className="update-progress compact">
-            <span className="progress-ring" />
-            <span>{progressLabel || "Working"}</span>
-          </div>
+          <BeerMeter
+            size="sm"
+            label={busyLabel}
+            value={progress}
+          />
         ) : queued ? (
           <button type="button" className="btn soft" disabled>
             Queued

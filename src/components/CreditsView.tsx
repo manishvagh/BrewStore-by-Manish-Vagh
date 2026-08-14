@@ -10,6 +10,7 @@ interface Props {
   appUpdate: AppUpdateInfo | null;
   checkingUpdate: boolean;
   applyingUpdate?: boolean;
+  progress?: number;
   onCheckUpdate: () => void;
   onDownloadUpdate: (update: AppUpdateInfo) => void;
   onDismissUpdate: () => void;
@@ -28,6 +29,7 @@ export function CreditsView({
   appUpdate,
   checkingUpdate,
   applyingUpdate,
+  progress,
   onCheckUpdate,
   onDownloadUpdate,
   onDismissUpdate,
@@ -52,6 +54,7 @@ export function CreditsView({
           update={appUpdate}
           checking={checkingUpdate}
           applying={applyingUpdate}
+          progress={progress}
           onCheck={onCheckUpdate}
           onDownload={onDownloadUpdate}
           onDismiss={onDismissUpdate}

@@ -34,6 +34,7 @@ import { BrewOnboarding } from "./components/BrewOnboarding";
 import { MaintainView } from "./components/MaintainView";
 import { CommandPalette, type PaletteAction } from "./components/CommandPalette";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { BeerScroll } from "./components/BeerScroll";
 import { useTheme } from "./hooks/useTheme";
 import { COLLECTIONS, resolveCollection } from "./discovery/collections";
 import { recommendForYou } from "./discovery/recommend";
@@ -48,6 +49,13 @@ import {
 import { resolveTrending } from "./discovery/trending";
 import { brewInstallCommand, formatAge } from "./lib/format";
 import { PAYPAL_SUPPORT_URL } from "./lib/donate";
+import { BeerMeter } from "./components/BeerMeter";
+import {
+  jobProgressKey,
+  parseBrewPercent,
+  progressFor,
+  type JobProgress,
+} from "./lib/brewProgress";
 import "./App.css";
 
 type NavId =
@@ -100,7 +108,7 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.3.8");
+  const [appVersion, setAppVersion] = useState("1.3.9");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
@@ -111,6 +119,7 @@ function App() {
   const [freshness, setFreshness] = useState<BrewFreshness | null>(null);
   const [updatingBrew, setUpdatingBrew] = useState(false);
   const [activity, setActivity] = useState<ActivitySnapshot | null>(null);
+  const [jobProgress, setJobProgress] = useState<JobProgress>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const actionQueueRef = useRef<
@@ -199,6 +208,13 @@ function App() {
     return api.onProgress((data) => {
       const text = data.text.trimEnd();
       if (!text && !data.text) return;
+      const key = jobProgressKey(data.id, data.action);
+      const percent = parseBrewPercent(data.text);
+      if (key && percent != null) {
+        setJobProgress((prev) =>
+          prev?.key === key && prev.percent === percent ? prev : { key, percent },
+        );
+      }
       if (data.action === "setup-homebrew") {
         setBrewSetupLog((prev) => [...prev.slice(-200), data.text]);
         return;
@@ -216,6 +232,30 @@ function App() {
     if (!api?.onQueue) return;
     return api.onQueue((data) => setActivity(data));
   }, [api]);
+
+  useEffect(() => {
+    const current = activity?.current;
+    const active = new Set<string>();
+    if (current?.pkgId) active.add(current.pkgId);
+    if (current?.action) active.add(current.action);
+    if (applyingUpdate) active.add("app-update");
+    if (installingBrew) active.add("setup-homebrew");
+    if (updatingBrew) active.add("brew-update");
+    if (updatingAll) active.add("upgrade-all");
+    busyKeys.forEach((key) => active.add(key));
+
+    setJobProgress((prev) => {
+      if (!prev) return prev;
+      return active.has(prev.key) ? prev : null;
+    });
+  }, [
+    activity?.current,
+    applyingUpdate,
+    installingBrew,
+    updatingBrew,
+    updatingAll,
+    busyKeys,
+  ]);
 
   useEffect(() => {
     if (!api?.checkForUpdate || brewMissing) return;
@@ -749,8 +789,7 @@ function App() {
     if (loading) {
       return (
         <div className="state-panel glass-card">
-          <div className="spinner" />
-          <p>Loading BrewStore…</p>
+          <BeerMeter layout="pint" size="lg" label="Loading BrewStore" />
         </div>
       );
     }
@@ -762,6 +801,7 @@ function App() {
           checking={checkingBrew}
           logLines={brewSetupLog}
           error={brewCheckError}
+          progress={progressFor(jobProgress, "setup-homebrew")}
           onInstall={handleInstallHomebrew}
           onOpenSite={() => {
             void api?.openExternal(brewMissing.brewSite);
@@ -795,6 +835,7 @@ function App() {
           busyId={busyId}
           busyKeys={busyKeys}
           queuedKeys={queuedKeys}
+          jobProgress={jobProgress}
         />
       );
     }
@@ -823,6 +864,7 @@ function App() {
           busyId={busyId}
           busyKeys={busyKeys}
           queuedKeys={queuedKeys}
+          jobProgress={jobProgress}
         />
       );
     }
@@ -853,6 +895,7 @@ function App() {
             queuedKeys={queuedKeys}
             pinnedIds={pinnedIds}
             diskUsage={diskUsage}
+            jobProgress={jobProgress}
             onOpenApp={(pkg) => void openInstalledApp(pkg)}
             onCopyInstall={(pkg) => void copyInstallCommand(pkg)}
           />
@@ -877,6 +920,7 @@ function App() {
           appUpdate={appUpdate}
           checkingAppUpdate={checkingUpdate}
           applyingAppUpdate={applyingUpdate}
+          jobProgress={jobProgress}
           onOpen={openPackage}
           onUpdate={(pkg) => void runAction("upgrade", pkg)}
           onUpdateAll={() => void upgradeAll()}
@@ -899,6 +943,7 @@ function App() {
           api={api}
           onLog={(line) => setLog((prev) => [...prev.slice(-100), line])}
           onRefreshInstalled={refreshStatus}
+          jobProgress={jobProgress}
         />
       );
     }
@@ -911,6 +956,7 @@ function App() {
         appUpdate={updateDismissed ? null : appUpdate}
         checkingUpdate={checkingUpdate}
         applyingUpdate={applyingUpdate}
+        progress={progressFor(jobProgress, "app-update")}
         onCheckUpdate={() => void checkAppUpdate(true)}
         onDownloadUpdate={(update) => void applyAppUpdate(update)}
         onDismissUpdate={() => setUpdateDismissed(true)}
@@ -968,6 +1014,7 @@ function App() {
               update={appUpdate}
               checking={checkingUpdate}
               applying={applyingUpdate}
+              progress={progressFor(jobProgress, "app-update")}
               onCheck={() => void checkAppUpdate(true)}
               onDownload={(update) => void applyAppUpdate(update)}
               onDismiss={() => setUpdateDismissed(true)}
@@ -1019,6 +1066,7 @@ function App() {
           <ActionLog
             lines={log}
             snapshot={activity}
+            jobProgress={jobProgress}
             onClear={() => setLog([])}
             onRetry={(id) => void retryActivity(id)}
           />
@@ -1067,6 +1115,7 @@ function App() {
         <div className={`content ${brewMissing ? "content-onboarding" : ""}`}>
           {renderMain()}
         </div>
+        <BeerScroll />
       </main>
 
       {selected && (
@@ -1082,6 +1131,12 @@ function App() {
             busyKeys.has(packageKey(selected)) ||
             updatingIds.has(packageKey(selected))
           }
+          progress={progressFor(
+            jobProgress,
+            packageKey(selected),
+            selected.id,
+            updatingAll ? "upgrade-all" : undefined,
+          )}
           diskBytes={diskUsage[packageKey(selected)]}
           onClose={() => setSelected(null)}
           onAction={runAction}

@@ -6,12 +6,14 @@ import { PackageIcon } from "./PackageIcon";
 import { VerifiedName } from "./VerifiedName";
 import { brewInstallCommand, formatBytes } from "../lib/format";
 import { isOfficialCurrent, tokenChannel } from "../lib/trust";
+import { BeerMeter } from "./BeerMeter";
 
 interface Props {
   pkg: BrewPackage;
   similar: BrewPackage[];
   pinned: boolean;
   busy: boolean;
+  progress?: number;
   diskBytes?: number | null;
   onClose: () => void;
   onAction: (action: PackageAction, pkg: BrewPackage) => void;
@@ -31,6 +33,7 @@ export function PackageDetail({
   similar,
   pinned,
   busy,
+  progress,
   diskBytes,
   onClose,
   onAction,
@@ -190,12 +193,13 @@ export function PackageDetail({
 
         <div className="drawer-actions">
           {busy ? (
-            <div className="update-progress">
-              <span className="progress-ring" />
-              <span>
-                {pkg.outdated ? "Updating…" : pkg.installed ? "Working…" : "Installing…"}
-              </span>
-            </div>
+            <BeerMeter
+              size="md"
+              label={
+                pkg.outdated ? "Updating" : pkg.installed ? "Working" : "Installing"
+              }
+              value={progress}
+            />
           ) : (
             <>
               {pkg.installed && pkg.type === "cask" && onOpenApp && (

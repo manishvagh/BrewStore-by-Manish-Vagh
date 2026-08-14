@@ -5,6 +5,8 @@ import { PackageGrid } from "./PackageGrid";
 import { PackageIcon } from "./PackageIcon";
 import { VerifiedName } from "./VerifiedName";
 import { isOfficialCurrent } from "../lib/trust";
+import { BeerMeter } from "./BeerMeter";
+import { progressFor, type JobProgress } from "../lib/brewProgress";
 
 interface Props {
   featured: BrewPackage[];
@@ -20,6 +22,7 @@ interface Props {
   busyId: string | null;
   busyKeys?: Set<string>;
   queuedKeys?: Set<string>;
+  jobProgress?: JobProgress;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenCollection: (id: string | null) => void;
@@ -31,6 +34,7 @@ function PackageRow({
   busyId,
   busyKeys,
   queuedKeys,
+  jobProgress,
   onOpen,
   onAction,
 }: {
@@ -38,6 +42,7 @@ function PackageRow({
   busyId: string | null;
   busyKeys?: Set<string>;
   queuedKeys?: Set<string>;
+  jobProgress?: JobProgress;
   onOpen: Props["onOpen"];
   onAction: Props["onAction"];
 }) {
@@ -51,6 +56,7 @@ function PackageRow({
             pkg={pkg}
             busy={busyId === pkg.id || Boolean(busyKeys?.has(key))}
             queued={Boolean(queuedKeys?.has(key))}
+            progress={progressFor(jobProgress ?? null, key, pkg.id)}
             onOpen={onOpen}
             onAction={onAction}
           />
@@ -64,12 +70,14 @@ function Spotlight({
   pkg,
   busy,
   queued,
+  progress,
   onOpen,
   onAction,
 }: {
   pkg: BrewPackage;
   busy: boolean;
   queued: boolean;
+  progress?: number;
   onOpen: Props["onOpen"];
   onAction: Props["onAction"];
 }) {
@@ -104,14 +112,20 @@ function Spotlight({
           <button type="button" className="btn soft" onClick={() => onOpen(pkg)}>
             Details
           </button>
+        ) : busy ? (
+          <BeerMeter
+            size="sm"
+            label={pkg.outdated ? "Updating" : "Installing"}
+            value={progress}
+          />
         ) : (
           <button
             type="button"
             className="btn primary"
-            disabled={Boolean(pkg.disabled) || busy || queued}
+            disabled={Boolean(pkg.disabled) || queued}
             onClick={() => void onAction(action, pkg)}
           >
-            {busy ? "Working" : queued ? "Queued" : actionLabel}
+            {queued ? "Queued" : actionLabel}
           </button>
         )}
       </div>
@@ -133,6 +147,7 @@ export function DiscoverView({
   busyId,
   busyKeys,
   queuedKeys,
+  jobProgress,
   onOpen,
   onAction,
   onOpenCollection,
@@ -142,7 +157,7 @@ export function DiscoverView({
   const activeCollection = collections.find(
     (row) => row.collection.id === activeCollectionId,
   );
-  const rowProps = { busyId, busyKeys, queuedKeys, onOpen, onAction };
+  const rowProps = { busyId, busyKeys, queuedKeys, jobProgress, onOpen, onAction };
   const featuredLead =
     featured.find((pkg) => !pkg.installed) || featured[0] || null;
   const featuredRest = featured.filter((pkg) => pkg.id !== featuredLead?.id);
@@ -246,6 +261,11 @@ export function DiscoverView({
               Boolean(busyKeys?.has(`${featuredLead.type}:${featuredLead.id}`))
             }
             queued={Boolean(queuedKeys?.has(`${featuredLead.type}:${featuredLead.id}`))}
+            progress={progressFor(
+              jobProgress ?? null,
+              `${featuredLead.type}:${featuredLead.id}`,
+              featuredLead.id,
+            )}
             onOpen={onOpen}
             onAction={onAction}
           />

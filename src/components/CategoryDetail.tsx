@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Category } from "../categories";
 import type { BrewPackage } from "../types";
 import { PackageGrid } from "./PackageGrid";
+import type { JobProgress } from "../lib/brewProgress";
 
 interface Props {
   category: Category;
@@ -9,6 +10,7 @@ interface Props {
   busyId: string | null;
   busyKeys?: Set<string>;
   queuedKeys?: Set<string>;
+  jobProgress?: JobProgress;
   onBack: () => void;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
@@ -20,6 +22,7 @@ export function CategoryDetail({
   busyId,
   busyKeys,
   queuedKeys,
+  jobProgress,
   onBack,
   onOpen,
   onAction,
@@ -46,6 +49,7 @@ export function CategoryDetail({
         busyId={busyId}
         busyKeys={busyKeys}
         queuedKeys={queuedKeys}
+        jobProgress={jobProgress}
       />
     </section>
   );

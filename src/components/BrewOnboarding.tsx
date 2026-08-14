@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
-import { ExternalLink, LoaderCircle } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { BeerMeter } from "./BeerMeter";
 
 interface Props {
   installing: boolean;
   checking: boolean;
   logLines: string[];
   error: string | null;
+  progress?: number;
   onInstall: () => Promise<void>;
   onOpenSite: () => void;
 }
@@ -15,6 +17,7 @@ export function BrewOnboarding({
   checking,
   logLines,
   error,
+  progress,
   onInstall,
   onOpenSite,
 }: Props) {
@@ -49,10 +52,12 @@ export function BrewOnboarding({
 
         <div className="onboarding-status" aria-live="polite">
           {busy && (
-            <p className="onboarding-busy">
-              <LoaderCircle size={16} className="spin" aria-hidden />
-              {installing ? "Installing Homebrew…" : "Checking Homebrew…"}
-            </p>
+            <BeerMeter
+              layout="pint"
+              size="md"
+              label={installing ? "Installing Homebrew" : "Checking Homebrew"}
+              value={progress}
+            />
           )}
           <pre ref={logRef} className="onboarding-log">
             {logLines.length ? logLines.join("") : "Preparing Homebrew setup…\n"}
