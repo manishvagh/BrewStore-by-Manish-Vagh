@@ -1172,48 +1172,347 @@ input {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 0.9rem;
 }
 
 .category-tile {
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   text-align: left;
-  border: 0;
+  border: 1px solid color-mix(in oklab, var(--accent) 42%, var(--glass-border));
   border-radius: 22px;
-  padding: 1.2rem;
-  min-block-size: 140px;
+  padding: 1.15rem 1.2rem 1.05rem;
+  min-block-size: 168px;
   cursor: pointer;
-  color: white;
+  color: var(--ink);
   background:
-    linear-gradient(145deg, color-mix(in oklab, var(--accent) 78%, white), var(--accent));
+    linear-gradient(
+      155deg,
+      color-mix(in oklab, var(--accent) 28%, transparent) 0%,
+      color-mix(in oklab, var(--accent) 8%, var(--glass)) 48%,
+      var(--glass) 100%
+    );
   box-shadow:
-    0 14px 28px color-mix(in oklab, var(--accent) 28%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    var(--shadow),
+    inset 0 1px 0 var(--glass-edge);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  transition: transform 180ms ease;
+  gap: 0.28rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .category-tile:hover {
-  transform: translateY(-3px) scale(1.01);
+  transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--accent) 70%, var(--glass-border));
+  box-shadow:
+    var(--card-hover-shadow),
+    0 10px 24px color-mix(in oklab, var(--accent) 22%, transparent),
+    inset 0 1px 0 var(--glass-edge);
+}
+
+.category-tile-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin-block-end: 0.35rem;
+  color: white;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--accent) 72%, white), var(--accent));
+  box-shadow:
+    0 8px 16px color-mix(in oklab, var(--accent) 32%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .category-tile-name {
   font-family: var(--display);
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 1;
 }
 
 .category-tile-blurb,
 .category-tile-count {
-  opacity: 0.9;
-  font-size: 0.88rem;
+  position: relative;
+  z-index: 1;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.category-tile-cues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-block-start: 0.35rem;
+  position: relative;
+  z-index: 1;
+}
+
+.category-cue {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
 }
 
 .category-tile-count {
   margin-block-start: auto;
-  font-weight: 600;
+  padding-block-start: 0.55rem;
+  font-weight: 650;
+  color: var(--accent);
+}
+
+.category-motif {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+}
+
+.category-motif::before,
+.category-motif::after {
+  content: "";
+  position: absolute;
+}
+
+.cat-developer-tools .category-motif::before {
+  right: 0.7rem;
+  bottom: 0.55rem;
+  width: 4.4rem;
+  height: 3.2rem;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--accent) 22%, transparent) 0 2px,
+      transparent 2px 9px
+    );
+  mask: linear-gradient(90deg, transparent, #000 30%);
+}
+
+.cat-developer-tools .category-motif::after {
+  right: 1.05rem;
+  bottom: 1.15rem;
+  color: color-mix(in oklab, var(--accent) 55%, transparent);
+  font: 700 1.7rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  content: "{ }";
+}
+
+.cat-productivity .category-motif::before {
+  right: 1rem;
+  bottom: 0.9rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  background:
+    linear-gradient(var(--accent), var(--accent)) 0 0.15rem / 0.7rem 0.7rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 0 1.05rem / 0.7rem 0.7rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 0 1.95rem / 0.7rem 0.7rem no-repeat,
+    linear-gradient(color-mix(in oklab, var(--accent) 45%, transparent), transparent)
+      1rem 0.32rem / 1.6rem 0.28rem no-repeat,
+    linear-gradient(color-mix(in oklab, var(--accent) 45%, transparent), transparent)
+      1rem 1.22rem / 1.4rem 0.28rem no-repeat,
+    linear-gradient(color-mix(in oklab, var(--accent) 45%, transparent), transparent)
+      1rem 2.12rem / 1.8rem 0.28rem no-repeat;
+  opacity: 0.7;
+}
+
+.cat-utilities .category-motif::before,
+.cat-utilities .category-motif::after {
+  right: 1.1rem;
+  bottom: 0.85rem;
+  border: 2px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: 50%;
+}
+
+.cat-utilities .category-motif::before {
+  width: 3.1rem;
+  height: 3.1rem;
+}
+
+.cat-utilities .category-motif::after {
+  width: 1.7rem;
+  height: 1.7rem;
+  right: 1.8rem;
+  bottom: 1.55rem;
+}
+
+.cat-graphics-design .category-motif::before,
+.cat-graphics-design .category-motif::after {
+  border-radius: 50%;
+  filter: blur(0.5px);
+}
+
+.cat-graphics-design .category-motif::before {
+  right: 0.4rem;
+  bottom: 0.35rem;
+  width: 3.4rem;
+  height: 3.4rem;
+  background: color-mix(in oklab, var(--accent) 42%, #f59e0b);
+}
+
+.cat-graphics-design .category-motif::after {
+  right: 1.7rem;
+  bottom: 1.15rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  background: color-mix(in oklab, var(--accent) 55%, #7c3aed);
+}
+
+.cat-photo-video .category-motif::before,
+.cat-photo-video .category-motif::after {
+  right: 1rem;
+  bottom: 0.7rem;
+  border-radius: 50%;
+  border: 3px solid color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.cat-photo-video .category-motif::before {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+
+.cat-photo-video .category-motif::after {
+  width: 1.5rem;
+  height: 1.5rem;
+  right: 1.85rem;
+  bottom: 1.55rem;
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.cat-music .category-motif {
+  background:
+    linear-gradient(var(--accent), var(--accent)) right 2.7rem bottom 0.85rem / 0.32rem 1.1rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 2.2rem bottom 0.85rem / 0.32rem 2.1rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 1.7rem bottom 0.85rem / 0.32rem 1.5rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 1.2rem bottom 0.85rem / 0.32rem 2.4rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 0.7rem bottom 0.85rem / 0.32rem 1.3rem no-repeat;
+  opacity: 0.38;
+}
+
+.cat-browsers .category-motif::before {
+  right: 0.7rem;
+  bottom: 0.5rem;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--accent) 42%, transparent);
+  background:
+    linear-gradient(90deg, transparent 48%, color-mix(in oklab, var(--accent) 40%, transparent) 48% 52%, transparent 52%),
+    linear-gradient(0deg, transparent 48%, color-mix(in oklab, var(--accent) 40%, transparent) 48% 52%, transparent 52%);
+}
+
+.cat-communication .category-motif::before,
+.cat-communication .category-motif::after {
+  border-radius: 1.1rem 1.1rem 1.1rem 0.25rem;
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.cat-communication .category-motif::before {
+  right: 1.7rem;
+  bottom: 1.5rem;
+  width: 2.3rem;
+  height: 1.5rem;
+}
+
+.cat-communication .category-motif::after {
+  right: 0.7rem;
+  bottom: 0.7rem;
+  width: 2.6rem;
+  height: 1.7rem;
+}
+
+.cat-security .category-motif::before {
+  right: 1.15rem;
+  bottom: 0.7rem;
+  width: 2.4rem;
+  height: 2.7rem;
+  border: 2px solid color-mix(in oklab, var(--accent) 50%, transparent);
+  border-radius: 1.2rem 1.2rem 0.5rem 0.5rem;
+}
+
+.cat-security .category-motif::after {
+  right: 1.85rem;
+  bottom: 1.35rem;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in oklab, var(--accent) 50%, transparent);
+  border-radius: 50%;
+}
+
+.cat-games .category-motif {
+  background:
+    linear-gradient(var(--accent), var(--accent)) right 2.2rem bottom 2.1rem / 0.7rem 0.7rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 1.3rem bottom 2.1rem / 0.7rem 0.7rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 2.2rem bottom 1.2rem / 0.7rem 0.7rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 1.3rem bottom 1.2rem / 0.7rem 0.7rem no-repeat;
+  opacity: 0.32;
+}
+
+.cat-education .category-motif::before {
+  right: 0.8rem;
+  bottom: 0.7rem;
+  width: 3rem;
+  height: 2.2rem;
+  border-radius: 0.2rem 0.7rem 0.7rem 0.2rem;
+  background: color-mix(in oklab, var(--accent) 32%, transparent);
+  box-shadow: -0.45rem 0.25rem 0 color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.cat-science .category-motif::before {
+  right: 1.1rem;
+  bottom: 1.1rem;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.cat-science .category-motif::after {
+  right: 2.05rem;
+  bottom: 2.05rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow:
+    1.1rem 0.55rem 0 0 color-mix(in oklab, var(--accent) 70%, white),
+    0.35rem 1.15rem 0 0 color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.cat-finance .category-motif {
+  background:
+    linear-gradient(var(--accent), var(--accent)) right 2.4rem bottom 0.85rem / 0.45rem 1.1rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 1.7rem bottom 0.85rem / 0.45rem 1.7rem no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 1rem bottom 0.85rem / 0.45rem 2.4rem no-repeat;
+  opacity: 0.38;
+}
+
+.cat-entertainment .category-motif::before {
+  right: 1.05rem;
+  bottom: 0.85rem;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 1.05rem 0 1.05rem 1.8rem;
+  border-color: transparent transparent transparent color-mix(in oklab, var(--accent) 42%, transparent);
+}
+
+@container (max-width: 200px) {
+  .category-tile-cues {
+    display: none;
+  }
 }
 
 .back-btn {

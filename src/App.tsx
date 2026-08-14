@@ -100,7 +100,7 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.3.7");
+  const [appVersion, setAppVersion] = useState("1.3.8");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
