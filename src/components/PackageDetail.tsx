@@ -111,7 +111,7 @@ export function PackageDetail({
     return () => {
       cancelled = true;
     };
-  }, [pkg, loadDeps, loadDependents, loadInstallPlan]);
+  }, [pkg.id, pkg.type, pkg.installed, loadDeps, loadDependents, loadInstallPlan]);
 
   async function handleZap() {
     if (!zapDryRun) {
