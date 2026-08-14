@@ -37,12 +37,13 @@ export function PackageGrid({
     packages.length,
     resetKey,
   );
+  const from = Math.min(start, Math.max(0, packages.length - 1));
+  const to = Math.max(from, Math.min(end, packages.length));
+  const visible = packages.slice(from, to);
 
   if (packages.length === 0) {
     return <div className="empty">Nothing here yet.</div>;
   }
-
-  const visible = packages.slice(start, end);
 
   return (
     <div
