@@ -630,8 +630,9 @@ input {
   }
 }
 
-.content-onboarding + .beer-scroll {
-  display: none;
+.content-onboarding + .beer-scroll,
+.beer-scroll.is-idle {
+  opacity: 0;
 }
 
 .beer-meter {
@@ -858,6 +859,11 @@ input {
 .update-row-action .beer-meter,
 .drawer-actions .beer-meter {
   justify-items: end;
+}
+
+.deps-block .beer-meter {
+  justify-items: start;
+  margin-block: 0.25rem 0.1rem;
 }
 
 .sidebar-activity .beer-meter {
@@ -2061,18 +2067,53 @@ input {
 }
 
 .drawer {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   width: min(440px, calc(100vw - 2.5rem));
   max-height: min(88dvh, 760px);
   height: auto;
   background: var(--drawer-bg);
-  padding: 1.25rem 1.4rem 1.4rem;
-  overflow: auto;
+  padding: 0;
+  overflow: hidden;
   border-radius: 24px;
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
   animation: modal-rise 240ms ease;
   -webkit-app-region: no-drag;
   app-region: no-drag;
+}
+
+.drawer-scroll {
+  grid-row: 1;
+  grid-column: 1;
+  min-height: 0;
+  max-height: min(88dvh, 760px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem 1.55rem 1.4rem 1.4rem;
+  scrollbar-width: none;
+}
+
+.drawer-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.drawer .beer-scroll {
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: end;
+  align-self: stretch;
+  z-index: 5;
+  margin: 0.7rem 0.4rem 0.7rem 0;
+}
+
+.drawer .beer-scroll.is-idle {
+  opacity: 0;
 }
 
 @keyframes modal-rise {
