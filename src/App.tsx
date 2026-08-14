@@ -100,7 +100,7 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.3.2");
+  const [appVersion, setAppVersion] = useState("1.3.3");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
@@ -205,6 +205,9 @@ function App() {
       }
       const line = data.text.trim();
       if (!line) return;
+      if (data.action === "app-update") {
+        setApplyingUpdate(true);
+      }
       setLog((prev) => [...prev.slice(-100), line]);
     });
   }, [api]);
@@ -571,17 +574,18 @@ function App() {
       return;
     }
     const ok = window.confirm(
-      `Install BrewStore ${update.latestVersion} and relaunch? The app will quit after the update is copied to Applications.`,
+      `Install BrewStore ${update.latestVersion} and relaunch?\n\nBrewStore downloads the update, then quits to copy the new build into Applications.`,
     );
     if (!ok) return;
     setApplyingUpdate(true);
+    setUpdateDismissed(false);
     setLog((prev) => [
       ...prev.slice(-100),
       `→ installing BrewStore ${update.latestVersion}`,
     ]);
     try {
       await api.applyAppUpdate(update);
-      setLog((prev) => [...prev.slice(-100), "✓ update installed — relaunching"]);
+      setLog((prev) => [...prev.slice(-100), "✓ update ready — quitting to install"]);
     } catch (err) {
       setApplyingUpdate(false);
       setLog((prev) => [
