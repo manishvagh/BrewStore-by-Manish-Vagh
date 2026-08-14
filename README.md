@@ -70,7 +70,7 @@ Browse featured GUI apps, jump into categories, and search the catalog.
 ![Discover view](docs/screenshots/discover.png)
 
 ### Categories
-Explore Homebrew like the App Store — Developer Tools, Utilities, Browsers, and more.
+Visual category cards with icons, motifs, and cue chips — Developer Tools, Utilities, Browsers, and more.
 
 ![Categories view](docs/screenshots/categories.png)
 
