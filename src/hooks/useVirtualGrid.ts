@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-const OVERSCAN_ROWS = 4;
-const DEFAULT_ROW = 132;
+const OVERSCAN_ROWS = 3;
+const DEFAULT_ROW = 136;
 const DEFAULT_COL_MIN = 280;
 
 function scrollParentOf(node: HTMLElement | null): HTMLElement | null {
@@ -31,13 +31,18 @@ function gridMetrics(el: HTMLElement) {
     styles.getPropertyValue("--pkg-col-min"),
     DEFAULT_COL_MIN,
   );
+  const rowHeight = parsePxOrRem(
+    styles.getPropertyValue("--pkg-row-height"),
+    DEFAULT_ROW,
+  );
   const columns = Math.max(1, Math.floor((el.clientWidth + gap) / (colMin + gap)));
-  return { gap, columns };
+  return { gap, columns, rowHeight };
 }
 
 export function useVirtualGrid(itemCount: number, resetKey?: string | number) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const padTopRef = useRef(0);
   const [range, setRange] = useState({ start: 0, end: Math.min(itemCount, 36) });
   const [pad, setPad] = useState({ top: 0, bottom: 0 });
 
@@ -48,15 +53,10 @@ export function useVirtualGrid(itemCount: number, resetKey?: string | number) {
     if (!wrap || !grid || !scroller || itemCount === 0) return;
 
     const root = scroller;
+    padTopRef.current = 0;
     root.scrollTop = 0;
 
-    let rowHeight = DEFAULT_ROW;
     let frame = 0;
-
-    function measureRow() {
-      const first = gridRef.current?.firstElementChild as HTMLElement | undefined;
-      if (first) rowHeight = Math.max(96, first.offsetHeight);
-    }
 
     function update() {
       const currentGrid = gridRef.current;
@@ -64,8 +64,7 @@ export function useVirtualGrid(itemCount: number, resetKey?: string | number) {
       if (!currentGrid || !currentWrap) return;
       if (currentGrid.clientWidth < 40) return;
 
-      measureRow();
-      const { gap, columns } = gridMetrics(currentGrid);
+      const { gap, columns, rowHeight } = gridMetrics(currentGrid);
       const stride = rowHeight + gap;
       const rows = Math.max(1, Math.ceil(itemCount / columns));
 
@@ -73,20 +72,32 @@ export function useVirtualGrid(itemCount: number, resetKey?: string | number) {
         currentWrap.getBoundingClientRect().top -
         root.getBoundingClientRect().top +
         root.scrollTop;
-      const localY = root.scrollTop - wrapTop;
+      const virtualY = Math.max(0, root.scrollTop - wrapTop - padTopRef.current);
       const startRow = Math.max(
         0,
-        Math.min(rows - 1, Math.floor(localY / stride) - OVERSCAN_ROWS),
+        Math.min(rows - 1, Math.floor(virtualY / stride) - OVERSCAN_ROWS),
       );
-      const visibleRows = Math.ceil(root.clientHeight / stride) + OVERSCAN_ROWS * 2;
+      const visibleRows =
+        Math.ceil(root.clientHeight / stride) + OVERSCAN_ROWS * 2;
       const endRow = Math.min(rows, startRow + Math.max(visibleRows, 1));
       const start = startRow * columns;
       const end = Math.min(itemCount, endRow * columns);
 
       const top = startRow * stride;
       const bottom = Math.max(0, (rows - endRow) * stride);
-      setRange((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
-      setPad((prev) => (prev.top === top && prev.bottom === bottom ? prev : { top, bottom }));
+
+      const delta = top - padTopRef.current;
+      if (delta !== 0) {
+        root.scrollTop += delta;
+        padTopRef.current = top;
+      }
+
+      setRange((prev) =>
+        prev.start === start && prev.end === end ? prev : { start, end },
+      );
+      setPad((prev) =>
+        prev.top === top && prev.bottom === bottom ? prev : { top, bottom },
+      );
     }
 
     function onScroll() {
