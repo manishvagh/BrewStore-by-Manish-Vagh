@@ -1,6 +1,7 @@
 import type { BrewPackage } from "../types";
 import type { Collection } from "../discovery/collections";
 import { PackageCard } from "./PackageCard";
+import { PackageGrid } from "./PackageGrid";
 import { PackageIcon } from "./PackageIcon";
 import { VerifiedName } from "./VerifiedName";
 import { isOfficialCurrent } from "../lib/trust";
@@ -156,8 +157,10 @@ export function DiscoverView({
         {packages.length === 0 ? (
           <div className="empty">No packages match these filters.</div>
         ) : (
-          <PackageRow
-            packages={packages.slice(0, query ? packages.length : 120)}
+          <PackageGrid
+            key={query || "filtered"}
+            packages={packages}
+            resetKey={query || "filtered"}
             {...rowProps}
           />
         )}
@@ -179,7 +182,12 @@ export function DiscoverView({
           <h1>{activeCollection.collection.name}</h1>
           <p>{activeCollection.collection.blurb}</p>
         </header>
-        <PackageRow packages={activeCollection.packages} {...rowProps} />
+        <PackageGrid
+          key={activeCollection.collection.id}
+          packages={activeCollection.packages}
+          resetKey={activeCollection.collection.id}
+          {...rowProps}
+        />
       </section>
     );
   }

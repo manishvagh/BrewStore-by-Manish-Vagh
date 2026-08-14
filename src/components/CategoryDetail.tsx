@@ -33,20 +33,20 @@ export function CategoryDetail({
       <header className="page-header">
         <h1 style={{ color: category.accent }}>{category.name}</h1>
         <p>
-          {category.blurb} · {packages.length.toLocaleString()} packages
+          {category.blurb} · scroll to browse all{" "}
+          {packages.length.toLocaleString()} packages
         </p>
       </header>
       <PackageGrid
-        packages={packages.slice(0, 200)}
+        key={category.id}
+        packages={packages}
+        resetKey={category.id}
         onOpen={onOpen}
         onAction={onAction}
         busyId={busyId}
         busyKeys={busyKeys}
         queuedKeys={queuedKeys}
       />
-      {packages.length > 200 && (
-        <p className="hint">Showing first 200 — refine with search.</p>
-      )}
     </section>
   );
 }
