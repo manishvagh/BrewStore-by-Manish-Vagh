@@ -600,6 +600,10 @@ input {
   letter-spacing: -0.03em;
 }
 
+.section-head h2 {
+  font-size: 1.15rem;
+}
+
 .page-header p,
 .section-head p,
 .muted,
@@ -609,6 +613,13 @@ input {
 
 .section-head {
   margin: 1.4rem 0 0.75rem;
+}
+
+.section-head.row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .section-head p {
@@ -828,9 +839,60 @@ input {
   margin: 0;
   font-size: 1rem;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-inline-size: 0;
+}
+
+.pkg-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.official-mark,
+.tag.official {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+.verified-badge {
+  flex-shrink: 0;
+  color: var(--accent);
+  fill: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.pkg-token {
+  margin: 0.12rem 0 0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem !important;
+  color: var(--muted);
+  display: block !important;
+  -webkit-line-clamp: unset;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-meta p:not(.pkg-token) {
+  margin: 0.2rem 0 0.45rem;
+}
+
+.tag.warn {
+  background: color-mix(in srgb, #f0c36a 28%, transparent);
+  color: #c9892a;
+}
+
+.package-card.faded {
+  opacity: 0.78;
 }
 
 .pkg-meta p {
@@ -1295,6 +1357,14 @@ input {
   margin: 0;
   font-family: var(--display);
   letter-spacing: -0.03em;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.drawer-hero .pkg-tags {
+  margin-block-start: 0.55rem;
 }
 
 .drawer-desc {
@@ -1786,24 +1856,102 @@ input {
   font-size: 0.68rem;
 }
 
-.freshness-bar {
-  margin: 0 0 1rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
-  color: var(--text);
-  font-size: 0.86rem;
-}
-
-.freshness-bar.stale {
-  background: color-mix(in srgb, #f0c36a 22%, transparent);
-}
-
-.updates-header-actions {
+.update-sources {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius);
+}
+
+.update-source-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
   align-items: center;
+  padding: 0.85rem 0.7rem;
+}
+
+.update-source-row + .update-source-row {
+  border-top: 1px solid var(--line);
+}
+
+.update-source-row.available {
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+  margin-inline: -0.35rem;
+  padding-inline: 1.05rem;
+  border-radius: calc(var(--radius) - 4px);
+}
+
+.update-source-row.available + .update-source-row {
+  border-top: 0;
+}
+
+.update-source-row.stale .update-source-copy p {
+  color: #f0c36a;
+}
+
+.update-source-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: center;
+  min-inline-size: 0;
+}
+
+.update-source-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--icon-surface);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    0 4px 12px light-dark(rgba(16, 32, 56, 0.08), rgba(0, 0, 0, 0.25));
+}
+
+.update-source-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.update-source-icon.mark {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.update-source-copy h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.update-source-copy p {
+  margin: 0.18rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.update-source-action {
+  display: flex;
+  justify-content: flex-end;
+  min-inline-size: 7.5rem;
+}
+
+.update-source-idle {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.update-source-idle.ok {
+  color: var(--ok);
 }
 
 .brewfile-diff-panel {

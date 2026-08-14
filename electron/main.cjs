@@ -239,15 +239,16 @@ ipcMain.handle("brew:zap-dry-run", async (_event, pkg) => {
 
 ipcMain.handle("brew:update", async () => {
   const brewPath = await getBrewPath();
+  const userData = app.getPath("userData");
   await locked({ action: "brew-update" }, async (onData) => {
-    await brew.brewUpdate(brewPath, onData);
+    await brew.brewUpdate(brewPath, onData, userData);
   });
-  return brew.getFreshness(brewPath);
+  return brew.getFreshness(brewPath, userData);
 });
 
 ipcMain.handle("brew:freshness", async () => {
   const brewPath = await getBrewPath();
-  return brew.getFreshness(brewPath);
+  return brew.getFreshness(brewPath, app.getPath("userData"));
 });
 
 ipcMain.handle("brew:install-plan", async (_event, pkg) => {

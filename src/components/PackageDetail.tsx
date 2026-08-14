@@ -3,7 +3,9 @@ import { ExternalLink, X } from "lucide-react";
 import type { BrewPackage, InstallPlan, PackageAction } from "../types";
 import { getCategory } from "../categories";
 import { PackageIcon } from "./PackageIcon";
+import { VerifiedName } from "./VerifiedName";
 import { brewInstallCommand, formatBytes } from "../lib/format";
+import { isOfficialCurrent, tokenChannel } from "../lib/trust";
 
 interface Props {
   pkg: BrewPackage;
@@ -44,6 +46,8 @@ export function PackageDetail({
 }: Props) {
   const category = pkg.category ? getCategory(pkg.category) : undefined;
   const sourceUrl = pkg.urls.head || pkg.urls.stable || pkg.homepage;
+  const channel = tokenChannel(pkg.token);
+  const official = isOfficialCurrent(pkg);
   const [deps, setDeps] = useState<string[]>([]);
   const [dependents, setDependents] = useState<string[]>([]);
   const [installPlan, setInstallPlan] = useState<InstallPlan | null>(null);
@@ -166,8 +170,21 @@ export function PackageDetail({
         <div className="drawer-hero">
           <PackageIcon pkg={pkg} size="lg" />
           <div>
-            <h2 id="package-detail-title">{pkg.name}</h2>
+            <VerifiedName
+              name={pkg.name}
+              official={official}
+              as="h2"
+              id="package-detail-title"
+            />
+            <p className="pkg-token">{pkg.token}</p>
             <p className="drawer-desc">{pkg.desc || "No description available."}</p>
+            <div className="pkg-tags">
+              <span className="tag">{pkg.type}</span>
+              {official && <span className="tag official">Official</span>}
+              {channel && <span className="tag soft">@{channel}</span>}
+              {pkg.deprecated && <span className="tag warn">Deprecated</span>}
+              {pkg.disabled && <span className="tag warn">Disabled</span>}
+            </div>
           </div>
         </div>
 
@@ -205,6 +222,8 @@ export function PackageDetail({
                 <button
                   type="button"
                   className="btn primary"
+                  disabled={Boolean(pkg.disabled)}
+                  title={pkg.disabled ? "Homebrew has disabled this package" : undefined}
                   onClick={() => void onAction("install", pkg)}
                 >
                   Install
@@ -279,6 +298,20 @@ export function PackageDetail({
             <dt>Type</dt>
             <dd>{pkg.type}</dd>
           </div>
+          <div>
+            <dt>Token</dt>
+            <dd>
+              <code>{pkg.token}</code>
+              {official ? " · current Homebrew package" : ""}
+              {channel ? ` · @${channel}` : ""}
+            </dd>
+          </div>
+          {(pkg.deprecated || pkg.disabled) && (
+            <div>
+              <dt>Status</dt>
+              <dd>{pkg.disabled ? "Disabled by Homebrew" : "Deprecated"}</dd>
+            </div>
+          )}
           <div>
             <dt>Category</dt>
             <dd>{category?.name || "Utilities"}</dd>

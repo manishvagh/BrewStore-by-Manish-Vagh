@@ -143,7 +143,7 @@ export function CommandPalette({ open, packages, onClose, onRun }: Props) {
                 ? item.action === "open"
                   ? `Open ${item.pkg.name}`
                   : item.action === "install"
-                    ? `Install ${item.pkg.name}`
+                    ? `Install ${item.pkg.name} (${item.pkg.token})`
                     : item.action === "upgrade"
                       ? `Update ${item.pkg.name}`
                       : `Copy “${brewInstallCommand(item.pkg)}”`

@@ -1,6 +1,8 @@
 import type { BrewPackage } from "../types";
 import { PackageIcon } from "./PackageIcon";
+import { VerifiedName } from "./VerifiedName";
 import { formatBytes } from "../lib/format";
+import { isOfficialCurrent, tokenChannel } from "../lib/trust";
 
 interface Props {
   pkg: BrewPackage;
@@ -29,6 +31,10 @@ export function PackageCard({
   onOpenApp,
   onCopyInstall,
 }: Props) {
+  const channel = tokenChannel(pkg.token);
+  const official = isOfficialCurrent(pkg);
+  const blocked = Boolean(pkg.disabled);
+
   let actionLabel = "Get";
   let action: "install" | "uninstall" | "upgrade" = "install";
   if (pkg.outdated) {
@@ -40,7 +46,7 @@ export function PackageCard({
 
   return (
     <article
-      className={`package-card glass-card ${featured ? "featured" : ""} ${busy ? "busy" : ""} ${queued ? "queued" : ""}`}
+      className={`package-card glass-card ${featured ? "featured" : ""} ${busy ? "busy" : ""} ${queued ? "queued" : ""} ${pkg.deprecated || pkg.disabled ? "faded" : ""}`}
       onClick={() => onOpen(pkg)}
       onKeyDown={(e) => {
         if (e.key === "Enter") onOpen(pkg);
@@ -50,10 +56,15 @@ export function PackageCard({
     >
       <PackageIcon pkg={pkg} />
       <div className="pkg-meta">
-        <h3>{pkg.name}</h3>
+        <VerifiedName name={pkg.name} official={official} />
+        <p className="pkg-token">{pkg.token}</p>
         <p>{pkg.desc || "No description"}</p>
         <div className="pkg-tags">
           <span className="tag">{pkg.type}</span>
+          {official && <span className="tag official">Official</span>}
+          {channel && <span className="tag soft">@{channel}</span>}
+          {pkg.deprecated && <span className="tag warn">Deprecated</span>}
+          {pkg.disabled && <span className="tag warn">Disabled</span>}
           {pkg.installed && !pkg.outdated && <span className="tag ok">Installed</span>}
           {pkg.outdated && <span className="tag soft">Update</span>}
           {pinned && <span className="tag soft">Pinned</span>}
@@ -103,6 +114,8 @@ export function PackageCard({
           <button
             type="button"
             className="btn primary"
+            disabled={blocked}
+            title={blocked ? "Homebrew has disabled this package" : undefined}
             onClick={() => void onAction(action, pkg)}
           >
             {actionLabel}

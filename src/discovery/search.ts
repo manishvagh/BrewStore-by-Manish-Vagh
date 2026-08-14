@@ -1,4 +1,5 @@
 import type { BrewPackage, PackageType } from "../types";
+import { trustRank } from "../lib/trust";
 
 export interface SearchFilters {
   cask: boolean;
@@ -118,6 +119,9 @@ function scorePackage(pkg: BrewPackage, terms: string[]): number {
     else if (desc.includes(term)) best = Math.max(best, 30);
     else if (fuzzyMatch(token, term) || fuzzyMatch(name, term)) best = Math.max(best, 20);
   }
+  if (best > 0) {
+    best += Math.max(0, 8 - trustRank(pkg));
+  }
   return best;
 }
 
@@ -198,12 +202,25 @@ export function searchPackages(
   }
 
   const filtered = pool.filter((pkg) => passesFilters(pkg, filters));
-  if (!q) return filtered;
+  if (!q) {
+    return [...filtered].sort((a, b) => {
+      const nameCmp = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      if (nameCmp) return nameCmp;
+      const trustCmp = trustRank(a) - trustRank(b);
+      if (trustCmp) return trustCmp;
+      return a.token.localeCompare(b.token);
+    });
+  }
 
   const terms = expandQuery(q);
   return filtered
     .map((pkg) => ({ pkg, score: scorePackage(pkg, terms) }))
     .filter((row) => row.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const trustCmp = trustRank(a.pkg) - trustRank(b.pkg);
+      if (trustCmp) return trustCmp;
+      return a.pkg.token.localeCompare(b.pkg.token);
+    })
     .map((row) => row.pkg);
 }
