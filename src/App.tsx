@@ -100,7 +100,7 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.3.3");
+  const [appVersion, setAppVersion] = useState("1.3.4");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
@@ -338,7 +338,7 @@ function App() {
     return searchPackages(enriched, query, searchFilters, catalogIndex);
   }, [enriched, query, searchFilters, catalogIndex]);
 
-  const forYou = useMemo(() => recommendForYou(enriched, 12), [enriched]);
+  const forYou = useMemo(() => recommendForYou(enriched, 8), [enriched]);
 
   const trendingPackages = useMemo(
     () => resolveTrending(enriched, trendingData, 16),
@@ -803,21 +803,23 @@ function App() {
       return (
         <DiscoverView
           featured={featured}
-          forYou={forYou}
+          forYou={forYou.packages}
+          forYouBlurb={forYou.blurb}
           trending={trendingPackages}
           collections={collectionRows}
           activeCollectionId={activeCollectionId}
           packages={filtered}
           query={query}
           filtering={Object.values(searchFilters).some(Boolean)}
+          updateCount={updateBadgeCount}
           onOpen={openPackage}
           onAction={runAction}
-          onOpenCategory={(id) => {
-            setNav("categories");
-            setActiveCategory(id);
-            setActiveCollectionId(null);
-          }}
           onOpenCollection={setActiveCollectionId}
+          onOpenUpdates={() => {
+            setNav("updates");
+            setActiveCollectionId(null);
+            setSelected(null);
+          }}
           busyId={busyId}
           busyKeys={busyKeys}
           queuedKeys={queuedKeys}
@@ -1039,9 +1041,7 @@ function App() {
                 aria-label="Search"
               />
             </div>
-            {(nav === "discover" ||
-              query.trim() ||
-              Object.values(searchFilters).some(Boolean)) && (
+            {(query.trim() || Object.values(searchFilters).some(Boolean)) && (
               <div className="search-filters" role="group" aria-label="Search filters">
                 {SEARCH_FILTER_OPTIONS.map(({ id, label }) => (
                   <button
