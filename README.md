@@ -1,6 +1,8 @@
 # BrewStore
 
-Native macOS desktop app for **discovering and managing** [Homebrew](https://brew.sh) packages — casks and formulae — with an App Store–style interface.
+**Homebrew GUI for Mac** — free, MIT, open source. A graphical frontend for [Homebrew](https://brew.sh): browse casks and formulae, run `brew outdated` / `brew upgrade`, manage `brew services` and taps, export a Brewfile. [Cakebrew alternative](https://brewstore.app/cakebrew-alternative).
+
+Native macOS desktop app for **discovering and managing** Homebrew packages — casks and formulae — with an App Store–style interface.
 
 **Author:** [Manish Vagh](https://manishvagh.in/)  
 **Official site:** [brewstore.app](https://brewstore.app/) · **Source:** [GitHub](https://github.com/manishvagh/BrewStore-by-Manish-Vagh)
