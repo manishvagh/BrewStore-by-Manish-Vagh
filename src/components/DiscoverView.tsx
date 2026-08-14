@@ -1,33 +1,29 @@
 import type { BrewPackage } from "../types";
 import type { Collection } from "../discovery/collections";
 import { PackageCard } from "./PackageCard";
+import { PackageIcon } from "./PackageIcon";
+import { VerifiedName } from "./VerifiedName";
+import { isOfficialCurrent } from "../lib/trust";
 
 interface Props {
   featured: BrewPackage[];
   forYou: BrewPackage[];
+  forYouBlurb: string;
   trending: BrewPackage[];
   collections: Array<{ collection: Collection; packages: BrewPackage[] }>;
   activeCollectionId: string | null;
   packages: BrewPackage[];
   query: string;
   filtering: boolean;
+  updateCount: number;
   busyId: string | null;
   busyKeys?: Set<string>;
   queuedKeys?: Set<string>;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
-  onOpenCategory: (id: string) => void;
   onOpenCollection: (id: string | null) => void;
+  onOpenUpdates: () => void;
 }
-
-const QUICK_CATEGORIES: { id: string; name: string }[] = [
-  { id: "developer-tools", name: "Developer Tools" },
-  { id: "productivity", name: "Productivity" },
-  { id: "browsers", name: "Browsers" },
-  { id: "utilities", name: "Utilities" },
-  { id: "photo-video", name: "Photo & Video" },
-  { id: "communication", name: "Communication" },
-];
 
 function PackageRow({
   packages,
@@ -36,7 +32,6 @@ function PackageRow({
   queuedKeys,
   onOpen,
   onAction,
-  featured,
 }: {
   packages: BrewPackage[];
   busyId: string | null;
@@ -44,17 +39,15 @@ function PackageRow({
   queuedKeys?: Set<string>;
   onOpen: Props["onOpen"];
   onAction: Props["onAction"];
-  featured?: boolean;
 }) {
   return (
-    <div className={featured ? "featured-row" : "package-grid"}>
+    <div className="package-grid">
       {packages.map((pkg) => {
         const key = `${pkg.type}:${pkg.id}`;
         return (
           <PackageCard
             key={key}
             pkg={pkg}
-            featured={featured}
             busy={busyId === pkg.id || Boolean(busyKeys?.has(key))}
             queued={Boolean(queuedKeys?.has(key))}
             onOpen={onOpen}
@@ -66,28 +59,92 @@ function PackageRow({
   );
 }
 
+function Spotlight({
+  pkg,
+  busy,
+  queued,
+  onOpen,
+  onAction,
+}: {
+  pkg: BrewPackage;
+  busy: boolean;
+  queued: boolean;
+  onOpen: Props["onOpen"];
+  onAction: Props["onAction"];
+}) {
+  const official = isOfficialCurrent(pkg);
+  let actionLabel = "Get";
+  let action: "install" | "uninstall" | "upgrade" = "install";
+  if (pkg.outdated) {
+    actionLabel = "Update";
+    action = "upgrade";
+  } else if (pkg.installed) {
+    actionLabel = "Details";
+  }
+
+  return (
+    <article
+      className="spotlight glass-card"
+      onClick={() => onOpen(pkg)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onOpen(pkg);
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <PackageIcon pkg={pkg} />
+      <div className="pkg-meta">
+        <p className="eyebrow">Featured</p>
+        <VerifiedName name={pkg.name} official={official} />
+        <p>{pkg.desc || "Popular GUI app available via Homebrew Cask"}</p>
+      </div>
+      <div className="pkg-actions" onClick={(e) => e.stopPropagation()}>
+        {pkg.installed && !pkg.outdated ? (
+          <button type="button" className="btn soft" onClick={() => onOpen(pkg)}>
+            Details
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn primary"
+            disabled={Boolean(pkg.disabled) || busy || queued}
+            onClick={() => void onAction(action, pkg)}
+          >
+            {busy ? "Working" : queued ? "Queued" : actionLabel}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function DiscoverView({
   featured,
   forYou,
+  forYouBlurb,
   trending,
   collections,
   activeCollectionId,
   packages,
   query,
   filtering,
+  updateCount,
   busyId,
   busyKeys,
   queuedKeys,
   onOpen,
   onAction,
-  onOpenCategory,
   onOpenCollection,
+  onOpenUpdates,
 }: Props) {
-  const spotlight = packages.slice(0, 24);
+  const browse = packages.slice(0, 8);
   const activeCollection = collections.find(
     (row) => row.collection.id === activeCollectionId,
   );
   const rowProps = { busyId, busyKeys, queuedKeys, onOpen, onAction };
+  const featuredLead =
+    featured.find((pkg) => !pkg.installed) || featured[0] || null;
+  const featuredRest = featured.filter((pkg) => pkg.id !== featuredLead?.id);
 
   if (query || filtering) {
     return (
@@ -129,51 +186,66 @@ export function DiscoverView({
 
   return (
     <section className="page discover">
-      <header className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Homebrew App Store</p>
-          <h1 className="hero-brand">BrewStore</h1>
-          <p className="hero-sub">
-            Discover apps and tools in Homebrew’s huge catalog — including ones
-            you’d never think to search for.
-          </p>
+      <header className="discover-intro">
+        <div>
+          <h1>Discover</h1>
+          <p>Browse by job, popularity, or what’s already on this Mac.</p>
         </div>
-        <div className="hero-visual" aria-hidden>
-          <div className="hero-orb" />
-          <div className="hero-orb secondary" />
-        </div>
+        {updateCount > 0 && (
+          <button type="button" className="btn primary" onClick={onOpenUpdates}>
+            {updateCount} update{updateCount === 1 ? "" : "s"}
+          </button>
+        )}
       </header>
+
+      {collections.length > 0 && (
+        <div className="collection-chips" role="list">
+          {collections.map(({ collection, packages: items }) => (
+            <button
+              key={collection.id}
+              type="button"
+              className="chip"
+              role="listitem"
+              onClick={() => onOpenCollection(collection.id)}
+            >
+              {collection.name}
+              <span className="chip-count">{items.length}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {forYou.length > 0 && (
         <>
           <div className="section-head">
             <h2>For you</h2>
-            <p>Suggested from what’s already on this Mac</p>
+            <p>{forYouBlurb}</p>
           </div>
-          <PackageRow packages={forYou} {...rowProps} featured />
+          <PackageRow packages={forYou.slice(0, 6)} {...rowProps} />
         </>
       )}
 
-      <div className="section-head">
-        <h2>Collections</h2>
-        <p>Curated lists to explore by job, not by package name</p>
-      </div>
-      <div className="collection-grid">
-        {collections.map(({ collection, packages: items }) => (
-          <button
-            key={collection.id}
-            type="button"
-            className="collection-card glass-card"
-            onClick={() => onOpenCollection(collection.id)}
-          >
-            <h3>{collection.name}</h3>
-            <p>{collection.blurb}</p>
-            <span className="collection-count">
-              {items.length} package{items.length === 1 ? "" : "s"}
-            </span>
-          </button>
-        ))}
-      </div>
+      {featuredLead && (
+        <>
+          <div className="section-head">
+            <h2>Featured</h2>
+            <p>Popular GUI apps available via Homebrew Cask</p>
+          </div>
+          <Spotlight
+            pkg={featuredLead}
+            busy={
+              busyId === featuredLead.id ||
+              Boolean(busyKeys?.has(`${featuredLead.type}:${featuredLead.id}`))
+            }
+            queued={Boolean(queuedKeys?.has(`${featuredLead.type}:${featuredLead.id}`))}
+            onOpen={onOpen}
+            onAction={onAction}
+          />
+          {featuredRest.length > 0 && (
+            <PackageRow packages={featuredRest.slice(0, 6)} {...rowProps} />
+          )}
+        </>
+      )}
 
       {trending.length > 0 && (
         <>
@@ -181,37 +253,15 @@ export function DiscoverView({
             <h2>Trending</h2>
             <p>Popular installs across Homebrew (last 30 days)</p>
           </div>
-          <PackageRow packages={trending} {...rowProps} featured />
+          <PackageRow packages={trending.slice(0, 6)} {...rowProps} />
         </>
       )}
 
       <div className="section-head">
-        <h2>Categories</h2>
-      </div>
-      <div className="category-chips">
-        {QUICK_CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            type="button"
-            className="chip"
-            onClick={() => onOpenCategory(cat.id)}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="section-head">
-        <h2>Featured</h2>
-        <p>Popular GUI apps available via Homebrew Cask</p>
-      </div>
-      <PackageRow packages={featured} {...rowProps} featured />
-
-      <div className="section-head">
         <h2>Browse</h2>
-        <p>A slice of the catalog — use search or collections for more</p>
+        <p>A slice of the catalog — search or open a collection for more</p>
       </div>
-      <PackageRow packages={spotlight} {...rowProps} />
+      <PackageRow packages={browse} {...rowProps} />
     </section>
   );
 }

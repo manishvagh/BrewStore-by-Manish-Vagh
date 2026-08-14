@@ -21,8 +21,10 @@ export function ActionLog({ lines, snapshot, onClear, onRetry }: Props) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [lines, current]);
 
+  const idle = !current && lines.length === 0 && failed.length === 0;
+
   return (
-    <div className="sidebar-activity glass-inset">
+    <div className={`sidebar-activity glass-inset ${idle ? "idle" : ""}`}>
       <div className="action-log-head">
         <span>Activity</span>
         {lines.length > 0 && (
@@ -31,17 +33,23 @@ export function ActionLog({ lines, snapshot, onClear, onRetry }: Props) {
           </button>
         )}
       </div>
-      {current && (
-        <p className="queue-current">
-          Running {current.action}
-          {current.pkgId ? ` · ${current.pkgId}` : ""}
-        </p>
+      {idle ? (
+        <p className="activity-idle">Idle — brew output appears here.</p>
+      ) : (
+        <>
+          {current && (
+            <p className="queue-current">
+              Running {current.action}
+              {current.pkgId ? ` · ${current.pkgId}` : ""}
+            </p>
+          )}
+          <pre ref={preRef}>
+            {lines.length === 0
+              ? "Install, update, or remove a package — live brew output shows here."
+              : lines.slice(-40).join("\n")}
+          </pre>
+        </>
       )}
-      <pre ref={preRef}>
-        {lines.length === 0
-          ? "Install, update, or remove a package — live brew output shows here."
-          : lines.slice(-40).join("\n")}
-      </pre>
       {failed.length > 0 && (
         <ul className="activity-failed">
           {failed.map((row) => (
