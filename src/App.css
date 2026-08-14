@@ -1749,3 +1749,83 @@ input {
   font-size: 0.78rem;
   border-top: 1px solid var(--line);
 }
+
+.queue-current {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  color: #9fd4ff;
+}
+
+.queue-status.stale {
+  color: #f0c36a;
+}
+
+.activity-failed {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-failed li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  color: #f2b4b4;
+}
+
+.activity-failed button {
+  border: 0;
+  background: transparent;
+  color: #9fd4ff;
+  cursor: pointer;
+  font-size: 0.68rem;
+}
+
+.freshness-bar {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.freshness-bar.stale {
+  background: color-mix(in srgb, #f0c36a 22%, transparent);
+}
+
+.updates-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.brewfile-diff-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.brewfile-diff {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  font-size: 0.86rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.service-started {
+  background: color-mix(in srgb, #3dd68c 30%, transparent);
+}
+
+.service-error {
+  background: color-mix(in srgb, #f07178 35%, transparent);
+}

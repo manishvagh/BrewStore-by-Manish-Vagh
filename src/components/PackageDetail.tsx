@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
-import type { BrewPackage } from "../types";
+import type { BrewPackage, InstallPlan, PackageAction } from "../types";
 import { getCategory } from "../categories";
 import { PackageIcon } from "./PackageIcon";
 import { brewInstallCommand, formatBytes } from "../lib/format";
@@ -12,7 +12,7 @@ interface Props {
   busy: boolean;
   diskBytes?: number | null;
   onClose: () => void;
-  onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
+  onAction: (action: PackageAction, pkg: BrewPackage) => void;
   onOpenExternal: (url: string) => void;
   onOpenPackage: (pkg: BrewPackage) => void;
   onTogglePin?: (pkg: BrewPackage, pin: boolean) => Promise<void>;
@@ -20,6 +20,8 @@ interface Props {
   onCopyInstall?: (pkg: BrewPackage) => void;
   loadDeps?: (pkg: BrewPackage) => Promise<string[]>;
   loadDependents?: (pkg: BrewPackage) => Promise<string[]>;
+  loadInstallPlan?: (pkg: BrewPackage) => Promise<InstallPlan>;
+  zapDryRun?: (pkg: BrewPackage) => Promise<{ items: string[]; raw: string }>;
 }
 
 export function PackageDetail({
@@ -37,13 +39,17 @@ export function PackageDetail({
   onCopyInstall,
   loadDeps,
   loadDependents,
+  loadInstallPlan,
+  zapDryRun,
 }: Props) {
   const category = pkg.category ? getCategory(pkg.category) : undefined;
   const sourceUrl = pkg.urls.head || pkg.urls.stable || pkg.homepage;
   const [deps, setDeps] = useState<string[]>([]);
   const [dependents, setDependents] = useState<string[]>([]);
+  const [installPlan, setInstallPlan] = useState<InstallPlan | null>(null);
   const [relLoading, setRelLoading] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
+  const [zapBusy, setZapBusy] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -55,46 +61,76 @@ export function PackageDetail({
 
   useEffect(() => {
     let cancelled = false;
-    if (!pkg.installed || (!loadDeps && !loadDependents)) {
+    setInstallPlan(null);
+    if (pkg.installed) {
+      if (!loadDeps && !loadDependents) {
+        setDeps([]);
+        setDependents([]);
+        return;
+      }
+      setRelLoading(true);
+      void (async () => {
+        try {
+          const [nextDeps, nextDependents] = await Promise.all([
+            loadDeps ? loadDeps(pkg) : Promise.resolve([]),
+            loadDependents ? loadDependents(pkg) : Promise.resolve([]),
+          ]);
+          if (!cancelled) {
+            setDeps(nextDeps);
+            setDependents(nextDependents);
+          }
+        } catch {
+          if (!cancelled) {
+            setDeps([]);
+            setDependents([]);
+          }
+        } finally {
+          if (!cancelled) setRelLoading(false);
+        }
+      })();
+    } else if (loadInstallPlan) {
+      setRelLoading(true);
+      void loadInstallPlan(pkg)
+        .then((plan) => {
+          if (!cancelled) setInstallPlan(plan);
+        })
+        .catch(() => {
+          if (!cancelled) setInstallPlan(null);
+        })
+        .finally(() => {
+          if (!cancelled) setRelLoading(false);
+        });
+    } else {
       setDeps([]);
       setDependents([]);
-      return;
     }
-    setRelLoading(true);
-    void (async () => {
-      try {
-        const [nextDeps, nextDependents] = await Promise.all([
-          loadDeps ? loadDeps(pkg) : Promise.resolve([]),
-          loadDependents ? loadDependents(pkg) : Promise.resolve([]),
-        ]);
-        if (!cancelled) {
-          setDeps(nextDeps);
-          setDependents(nextDependents);
-        }
-      } catch {
-        if (!cancelled) {
-          setDeps([]);
-          setDependents([]);
-        }
-      } finally {
-        if (!cancelled) setRelLoading(false);
-      }
-    })();
     return () => {
       cancelled = true;
     };
-  }, [pkg, loadDeps, loadDependents]);
+  }, [pkg, loadDeps, loadDependents, loadInstallPlan]);
 
-  async function handleUninstall() {
-    if (dependents.length > 0) {
-      const ok = window.confirm(
-        `${dependents.slice(0, 8).join(", ")}${
-          dependents.length > 8 ? "…" : ""
-        } need this package.\n\nUninstall ${pkg.name} anyway?`,
-      );
-      if (!ok) return;
+  async function handleZap() {
+    if (!zapDryRun) {
+      if (!window.confirm(`Zap ${pkg.name}? This also deletes leftover app files.`)) return;
+      onAction("zap", pkg);
+      return;
     }
-    onAction("uninstall", pkg);
+    setZapBusy(true);
+    try {
+      const preview = await zapDryRun(pkg);
+      const sample = (preview.items.length ? preview.items : preview.raw.split("\n"))
+        .filter(Boolean)
+        .slice(0, 12)
+        .join("\n");
+      const ok = window.confirm(
+        `Zap ${pkg.name}? This uninstalls the cask and leftover files.\n\n${sample || "Homebrew will remove associated files."}`,
+      );
+      if (ok) onAction("zap", pkg);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setZapBusy(false);
+    }
   }
 
   return (
@@ -183,6 +219,15 @@ export function PackageDetail({
                   Update
                 </button>
               )}
+              {pkg.installed && (
+                <button
+                  type="button"
+                  className="btn soft"
+                  onClick={() => void onAction("reinstall", pkg)}
+                >
+                  Reinstall
+                </button>
+              )}
               {pkg.installed && pkg.type === "formula" && onTogglePin && (
                 <button
                   type="button"
@@ -206,9 +251,19 @@ export function PackageDetail({
                 <button
                   type="button"
                   className="btn danger"
-                  onClick={() => void handleUninstall()}
+                  onClick={() => void onAction("uninstall", pkg)}
                 >
                   Uninstall
+                </button>
+              )}
+              {pkg.installed && pkg.type === "cask" && (
+                <button
+                  type="button"
+                  className="btn danger"
+                  disabled={zapBusy}
+                  onClick={() => void handleZap()}
+                >
+                  {zapBusy ? "Checking…" : "Zap"}
                 </button>
               )}
             </>
@@ -251,6 +306,32 @@ export function PackageDetail({
             </div>
           )}
         </dl>
+
+        {!pkg.installed && (
+          <div className="deps-block">
+            <h3>Install plan</h3>
+            {relLoading ? (
+              <p className="muted">Checking dependencies…</p>
+            ) : installPlan ? (
+              <>
+                <p className="deps-label">Will install</p>
+                <p className="deps-values">
+                  {installPlan.missing.length
+                    ? installPlan.missing.join(", ")
+                    : "No extra formulae — already satisfied"}
+                </p>
+                {installPlan.already.length > 0 && (
+                  <>
+                    <p className="deps-label">Already present</p>
+                    <p className="deps-values">{installPlan.already.join(", ")}</p>
+                  </>
+                )}
+              </>
+            ) : (
+              <p className="muted">Open this package to preview what Homebrew will install.</p>
+            )}
+          </div>
+        )}
 
         {pkg.installed && (
           <div className="deps-block">

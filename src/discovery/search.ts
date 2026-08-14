@@ -5,6 +5,7 @@ export interface SearchFilters {
   formula: boolean;
   installed: boolean;
   notInstalled: boolean;
+  outdated: boolean;
   gui: boolean;
   openSource: boolean;
 }
@@ -16,6 +17,7 @@ export const DEFAULT_SEARCH_FILTERS: SearchFilters = {
   formula: false,
   installed: false,
   notInstalled: false,
+  outdated: false,
   gui: false,
   openSource: false,
 };
@@ -28,6 +30,7 @@ export const SEARCH_FILTER_OPTIONS: {
   { id: "formula", label: "Formulae" },
   { id: "installed", label: "Installed" },
   { id: "notInstalled", label: "Not installed" },
+  { id: "outdated", label: "Outdated" },
   { id: "gui", label: "GUI apps" },
   { id: "openSource", label: "Open source" },
 ];
@@ -133,17 +136,68 @@ function passesFilters(pkg: BrewPackage, filters: SearchFilters): boolean {
   }
 
   if (filters.gui && !isGui(pkg)) return false;
+  if (filters.outdated && !pkg.outdated) return false;
   if (filters.openSource && !isOpenSource(pkg)) return false;
   return true;
+}
+
+export interface CatalogIndex {
+  packages: BrewPackage[];
+  inv: Map<string, number[]>;
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9@.+-]+/)
+    .filter((t) => t.length > 1);
+}
+
+export function buildCatalogIndex(packages: BrewPackage[]): CatalogIndex {
+  const inv = new Map<string, number[]>();
+  packages.forEach((pkg, i) => {
+    const tokens = new Set([
+      ...tokenize(pkg.token),
+      ...tokenize(pkg.name),
+      ...tokenize((pkg.desc || "").slice(0, 180)),
+    ]);
+    for (const token of tokens) {
+      const list = inv.get(token);
+      if (list) list.push(i);
+      else inv.set(token, [i]);
+    }
+  });
+  return { packages, inv };
 }
 
 export function searchPackages(
   packages: BrewPackage[],
   query: string,
   filters: SearchFilters = DEFAULT_SEARCH_FILTERS,
+  index?: CatalogIndex | null,
 ): BrewPackage[] {
-  const filtered = packages.filter((pkg) => passesFilters(pkg, filters));
   const q = query.trim();
+  let pool = packages;
+  if (q && index && index.packages === packages) {
+    const terms = expandQuery(q);
+    const hits = new Set<number>();
+    for (const term of terms) {
+      const exact = index.inv.get(term);
+      if (exact) for (const i of exact) hits.add(i);
+      if (term.length >= 2) {
+        for (const [token, ids] of index.inv) {
+          if (token.startsWith(term)) {
+            for (const i of ids) hits.add(i);
+          }
+        }
+      }
+    }
+    if (hits.size) {
+      pool = [...hits].map((i) => index.packages[i]).filter(Boolean);
+    }
+  }
+
+  const filtered = pool.filter((pkg) => passesFilters(pkg, filters));
   if (!q) return filtered;
 
   const terms = expandQuery(q);

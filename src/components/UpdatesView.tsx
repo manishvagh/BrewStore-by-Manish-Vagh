@@ -1,5 +1,6 @@
-import type { BrewPackage } from "../types";
+import type { BrewFreshness, BrewPackage } from "../types";
 import { PackageIcon } from "./PackageIcon";
+import { formatAge } from "../lib/format";
 
 interface Props {
   packages: BrewPackage[];
@@ -7,9 +8,12 @@ interface Props {
   updatingIds: Set<string>;
   dismissingIds: Set<string>;
   updatingAll: boolean;
+  freshness: BrewFreshness | null;
+  updatingBrew: boolean;
   onOpen: (pkg: BrewPackage) => void;
   onUpdate: (pkg: BrewPackage) => void;
   onUpdateAll: () => void;
+  onBrewUpdate: () => void;
 }
 
 export function UpdatesView({
@@ -18,9 +22,12 @@ export function UpdatesView({
   updatingIds,
   dismissingIds,
   updatingAll,
+  freshness,
+  updatingBrew,
   onOpen,
   onUpdate,
   onUpdateAll,
+  onBrewUpdate,
 }: Props) {
   const pending = packages.filter((p) => !dismissingIds.has(`${p.type}:${p.id}`));
   const allBusy = updatingAll || busyId === "__all__";
@@ -36,24 +43,40 @@ export function UpdatesView({
               : `${pending.length} update${pending.length === 1 ? "" : "s"} available`}
           </p>
         </div>
-        {pending.length > 0 && (
+        <div className="updates-header-actions">
           <button
             type="button"
-            className="btn primary"
-            disabled={allBusy || updatingIds.size > 0}
-            onClick={onUpdateAll}
+            className="btn soft"
+            disabled={updatingBrew || allBusy}
+            onClick={onBrewUpdate}
           >
-            {allBusy ? (
-              <span className="btn-progress">
-                <span className="mini-spinner" />
-                Updating All…
-              </span>
-            ) : (
-              "Update All"
-            )}
+            {updatingBrew ? "Updating Homebrew…" : "Update Homebrew"}
           </button>
-        )}
+          {pending.length > 0 && (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={allBusy || updatingIds.size > 0 || updatingBrew}
+              onClick={onUpdateAll}
+            >
+              {allBusy ? (
+                <span className="btn-progress">
+                  <span className="mini-spinner" />
+                  Updating All…
+                </span>
+              ) : (
+                "Update All"
+              )}
+            </button>
+          )}
+        </div>
       </header>
+
+      <div className={`freshness-bar ${freshness?.stale ? "stale" : ""}`}>
+        {freshness?.stale
+          ? `Homebrew formulae look stale (${formatAge(freshness.ageMs)}). Update Homebrew before trusting outdated lists.`
+          : `Homebrew last updated ${formatAge(freshness?.ageMs)}`}
+      </div>
 
       {pending.length === 0 ? (
         <div className="empty glass-card">

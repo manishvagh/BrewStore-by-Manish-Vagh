@@ -11,11 +11,14 @@ import {
 } from "lucide-react";
 import { CATEGORIES, getCategory, packageKey, withCategories } from "./categories";
 import type {
+  ActivitySnapshot,
   AppUpdateInfo,
+  BrewFreshness,
   BrewPackage,
   BrewStatus,
   InstalledMap,
   OutdatedMap,
+  PackageAction,
   TrendingPayload,
 } from "./types";
 import { DiscoverView } from "./components/DiscoverView";
@@ -38,11 +41,12 @@ import { findSimilarPackages } from "./discovery/similar";
 import {
   DEFAULT_SEARCH_FILTERS,
   SEARCH_FILTER_OPTIONS,
+  buildCatalogIndex,
   searchPackages,
   type SearchFilters,
 } from "./discovery/search";
 import { resolveTrending } from "./discovery/trending";
-import { brewInstallCommand } from "./lib/format";
+import { brewInstallCommand, formatAge } from "./lib/format";
 import { PAYPAL_SUPPORT_URL } from "./lib/donate";
 import "./App.css";
 
@@ -96,17 +100,21 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.2.0");
+  const [appVersion, setAppVersion] = useState("1.3.0");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [applyingUpdate, setApplyingUpdate] = useState(false);
+  const [freshness, setFreshness] = useState<BrewFreshness | null>(null);
+  const [updatingBrew, setUpdatingBrew] = useState(false);
+  const [activity, setActivity] = useState<ActivitySnapshot | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const actionQueueRef = useRef<
-    Array<{ action: "install" | "uninstall" | "upgrade"; pkg: BrewPackage }>
+    Array<{ action: PackageAction; pkg: BrewPackage }>
   >([]);
   const queueRunningRef = useRef(false);
   const api = typeof window !== "undefined" ? window.brewStore : undefined;
@@ -158,6 +166,12 @@ function App() {
           setPackages(withCategories(catalog.packages));
         });
         await refreshStatus();
+        if (api.getFreshness) {
+          void api.getFreshness().then(setFreshness).catch(() => {});
+        }
+        if (api.getActivity) {
+          void api.getActivity().then(setActivity).catch(() => {});
+        }
         void api
           .loadTrending({ force })
           .then((trending) => setTrendingData(trending))
@@ -193,6 +207,11 @@ function App() {
       if (!line) return;
       setLog((prev) => [...prev.slice(-100), line]);
     });
+  }, [api]);
+
+  useEffect(() => {
+    if (!api?.onQueue) return;
+    return api.onQueue((data) => setActivity(data));
   }, [api]);
 
   useEffect(() => {
@@ -310,9 +329,11 @@ function App() {
     });
   }, [packages, installed, outdated]);
 
+  const catalogIndex = useMemo(() => buildCatalogIndex(enriched), [enriched]);
+
   const filtered = useMemo(() => {
-    return searchPackages(enriched, query, searchFilters);
-  }, [enriched, query, searchFilters]);
+    return searchPackages(enriched, query, searchFilters, catalogIndex);
+  }, [enriched, query, searchFilters, catalogIndex]);
 
   const forYou = useMemo(() => recommendForYou(enriched, 12), [enriched]);
 
@@ -396,10 +417,7 @@ function App() {
     }, 420);
   }
 
-  async function runAction(
-    action: "install" | "uninstall" | "upgrade",
-    pkg: BrewPackage,
-  ) {
+  async function runAction(action: PackageAction, pkg: BrewPackage) {
     if (!api) return;
     const key = packageKey(pkg);
     const already =
@@ -411,6 +429,36 @@ function App() {
     if (already) {
       setLog((prev) => [...prev.slice(-100), `… already queued: ${pkg.id}`]);
       return;
+    }
+
+    if (action === "install" && api.getInstallPlan) {
+      try {
+        const plan = await api.getInstallPlan(pkg);
+        if (plan.missing.length > 0) {
+          const ok = window.confirm(
+            `Install ${pkg.name}?\n\nHomebrew will also install:\n${plan.missing.slice(0, 16).join(", ")}`,
+          );
+          if (!ok) return;
+        }
+      } catch {
+        // Proceed without a plan if brew is busy or the lookup fails.
+      }
+    }
+
+    if (action === "uninstall" && api.getUninstallPlan) {
+      try {
+        const plan = await api.getUninstallPlan(pkg);
+        if (plan.dependents.length > 0) {
+          const ok = window.confirm(
+            `${plan.dependents.slice(0, 8).join(", ")}${
+              plan.dependents.length > 8 ? "…" : ""
+            } need this package.\n\nUninstall ${pkg.name} anyway?`,
+          );
+          if (!ok) return;
+        }
+      } catch {
+        // Fall through to uninstall.
+      }
     }
 
     actionQueueRef.current.push({ action, pkg });
@@ -448,6 +496,8 @@ function App() {
         if (action === "install") await api.install(pkg);
         if (action === "uninstall") await api.uninstall(pkg);
         if (action === "upgrade") await api.upgrade(pkg);
+        if (action === "reinstall") await api.reinstall(pkg);
+        if (action === "zap") await api.zap(pkg);
         setLog((prev) => [...prev.slice(-100), `✓ ${action} finished: ${pkg.id}`]);
         if (action === "upgrade") dismissFromUpdates(pkg);
         await refreshStatus();
@@ -501,6 +551,71 @@ function App() {
       }
     } finally {
       setCheckingUpdate(false);
+    }
+  }
+
+  async function applyAppUpdate(update: AppUpdateInfo) {
+    if (!api) return;
+    const url = update.zipUrl || update.downloadUrl || update.dmgUrl;
+    if (!url) {
+      void api.openExternal(update.releaseUrl);
+      return;
+    }
+    if (!api.applyAppUpdate) {
+      void api.openExternal(url);
+      return;
+    }
+    const ok = window.confirm(
+      `Install BrewStore ${update.latestVersion} and relaunch? The app will quit after the update is copied to Applications.`,
+    );
+    if (!ok) return;
+    setApplyingUpdate(true);
+    setLog((prev) => [
+      ...prev.slice(-100),
+      `→ installing BrewStore ${update.latestVersion}`,
+    ]);
+    try {
+      await api.applyAppUpdate(update);
+      setLog((prev) => [...prev.slice(-100), "✓ update installed — relaunching"]);
+    } catch (err) {
+      setApplyingUpdate(false);
+      setLog((prev) => [
+        ...prev.slice(-100),
+        `✗ update failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
+    }
+  }
+
+  async function runBrewUpdate() {
+    if (!api?.brewUpdate) return;
+    setUpdatingBrew(true);
+    setLog((prev) => [...prev.slice(-100), "→ brew update"]);
+    try {
+      const next = await api.brewUpdate();
+      setFreshness(next);
+      setLog((prev) => [...prev.slice(-100), "✓ Homebrew formulae updated"]);
+      await refreshStatus();
+    } catch (err) {
+      setLog((prev) => [
+        ...prev.slice(-100),
+        `✗ brew update failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
+    } finally {
+      setUpdatingBrew(false);
+    }
+  }
+
+  async function retryActivity(id: string) {
+    if (!api?.retryActivity) return;
+    setLog((prev) => [...prev.slice(-100), "→ retry last failed job"]);
+    try {
+      await api.retryActivity(id);
+      await refreshStatus();
+    } catch (err) {
+      setLog((prev) => [
+        ...prev.slice(-100),
+        `✗ retry failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
     }
   }
 
@@ -718,9 +833,12 @@ function App() {
           updatingIds={updatingIds}
           dismissingIds={dismissingIds}
           updatingAll={updatingAll}
+          freshness={freshness}
+          updatingBrew={updatingBrew}
           onOpen={openPackage}
           onUpdate={(pkg) => void runAction("upgrade", pkg)}
           onUpdateAll={() => void upgradeAll()}
+          onBrewUpdate={() => void runBrewUpdate()}
         />
       );
     }
@@ -749,11 +867,9 @@ function App() {
         counts={counts}
         appUpdate={updateDismissed ? null : appUpdate}
         checkingUpdate={checkingUpdate}
+        applyingUpdate={applyingUpdate}
         onCheckUpdate={() => void checkAppUpdate(true)}
-        onDownloadUpdate={(update) => {
-          const url = update.downloadUrl || update.releaseUrl;
-          void api?.openExternal(url);
-        }}
+        onDownloadUpdate={(update) => void applyAppUpdate(update)}
         onDismissUpdate={() => setUpdateDismissed(true)}
         onOpenExternal={(url) => void api?.openExternal(url)}
       />
@@ -808,11 +924,9 @@ function App() {
             <UpdateBanner
               update={appUpdate}
               checking={checkingUpdate}
+              applying={applyingUpdate}
               onCheck={() => void checkAppUpdate(true)}
-              onDownload={(update) => {
-                const url = update.downloadUrl || update.releaseUrl;
-                void api?.openExternal(url);
-              }}
+              onDownload={(update) => void applyAppUpdate(update)}
               onDismiss={() => setUpdateDismissed(true)}
             />
           )}
@@ -841,14 +955,30 @@ function App() {
             Commands ⌘K
           </button>
 
-          {queuedKeys.size > 0 && (
-            <p className="queue-status">
-              Queue: {queuedKeys.size + busyKeys.size} package
-              {queuedKeys.size + busyKeys.size === 1 ? "" : "s"}
+          {freshness && (
+            <p className={`queue-status ${freshness.stale ? "stale" : ""}`}>
+              Homebrew {freshness.stale ? "stale" : "fresh"} · {formatAge(freshness.ageMs)}
             </p>
           )}
 
-          <ActionLog lines={log} onClear={() => setLog([])} />
+          {(queuedKeys.size > 0 || activity?.current) && (
+            <p className="queue-status">
+              {activity?.current
+                ? `Engine: ${activity.current.action}${
+                    activity.current.pkgId ? ` ${activity.current.pkgId}` : ""
+                  }`
+                : `Queue: ${queuedKeys.size + busyKeys.size} package${
+                    queuedKeys.size + busyKeys.size === 1 ? "" : "s"
+                  }`}
+            </p>
+          )}
+
+          <ActionLog
+            lines={log}
+            snapshot={activity}
+            onClear={() => setLog([])}
+            onRetry={(id) => void retryActivity(id)}
+          />
         </div>
       </aside>
 
@@ -918,6 +1048,15 @@ function App() {
           onOpenPackage={(pkg) => setSelected(pkg)}
           onOpenApp={(pkg) => void openInstalledApp(pkg)}
           onCopyInstall={(pkg) => void copyInstallCommand(pkg)}
+          loadInstallPlan={api ? (pkg) => api.getInstallPlan(pkg) : undefined}
+          zapDryRun={
+            api
+              ? async (pkg) => {
+                  const result = await api.zapDryRun(pkg);
+                  return { items: result.items || [], raw: result.raw || "" };
+                }
+              : undefined
+          }
           onTogglePin={
             api
               ? async (pkg, pin) => {
