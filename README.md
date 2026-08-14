@@ -67,32 +67,32 @@ After install, if macOS Gatekeeper blocks the app, see [First launch / Gatekeepe
 ### Discover
 Browse featured GUI apps, jump into categories, and search the catalog.
 
-![Discover view](docs/screenshots/discover.png)
+![Discover view](docs/screenshots/discover.png?v=1.3.8)
 
 ### Categories
 Visual category cards with icons, motifs, and cue chips — Developer Tools, Utilities, Browsers, and more.
 
-![Categories view](docs/screenshots/categories.png)
+![Categories view](docs/screenshots/categories.png?v=1.3.8)
 
 ### Installed
 See what’s on this Mac, spot updates, and open package details.
 
-![Installed view](docs/screenshots/installed.png)
+![Installed view](docs/screenshots/installed.png?v=1.3.8)
 
 ### Updates
 Review outdated packages and update individually or all at once.
 
-![Updates view](docs/screenshots/updates.png)
+![Updates view](docs/screenshots/updates.png?v=1.3.8)
 
 ### Maintain
 Manage taps, Homebrew services (start / stop / restart), cleanup, doctor, and Brewfile export/import.
 
-![Maintain view](docs/screenshots/maintain.png)
+![Maintain view](docs/screenshots/maintain.png?v=1.3.8)
 
 ### Credits
 Attribution for BrewStore, Homebrew, and the authors of every package you install.
 
-![Credits view](docs/screenshots/credits.png)
+![Credits view](docs/screenshots/credits.png?v=1.3.8)
 
 ---
 
