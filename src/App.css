@@ -613,7 +613,7 @@ input {
 }
 
 .page.discover .package-grid {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  --pkg-col-min: 240px;
 }
 
 .collection-chips {
@@ -845,9 +845,15 @@ input {
 }
 
 .package-grid {
+  --pkg-col-min: 280px;
+  --pkg-gap: 0.85rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(var(--pkg-col-min), 1fr));
+  gap: var(--pkg-gap);
+}
+
+.package-grid-virt {
+  min-height: 0;
 }
 
 .package-card {
@@ -858,6 +864,7 @@ input {
   padding: 0.95rem;
   border-radius: var(--radius);
   cursor: pointer;
+  min-height: 7.35rem;
   transition: transform 180ms ease, box-shadow 180ms ease;
   min-inline-size: 0;
 }

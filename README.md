@@ -105,7 +105,7 @@ Attribution for BrewStore, Homebrew, and the authors of every package you instal
 - Search with filters (cask/formula, installed, GUI, open source) plus synonyms
 - Similar packages on the detail view
 - Search across name, token, and description
-- Category-based browsing (Developer Tools, Productivity, Browsers, and more)
+- Category-based browsing (Developer Tools, Productivity, Browsers, and more) — scroll the full list, not a 200-item slice
 - Featured apps on Discover for quick starts
 - Package detail view with homepage, formula, and source links
 - Install, uninstall, and update (including Update All)
