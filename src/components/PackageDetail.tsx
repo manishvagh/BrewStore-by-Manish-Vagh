@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import type { BrewPackage, InstallPlan, PackageAction } from "../types";
 import { getCategory } from "../categories";
@@ -7,6 +7,7 @@ import { VerifiedName } from "./VerifiedName";
 import { brewInstallCommand, formatBytes } from "../lib/format";
 import { isOfficialCurrent, tokenChannel } from "../lib/trust";
 import { BeerMeter } from "./BeerMeter";
+import { BeerScroll } from "./BeerScroll";
 
 interface Props {
   pkg: BrewPackage;
@@ -57,6 +58,7 @@ export function PackageDetail({
   const [relLoading, setRelLoading] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
   const [zapBusy, setZapBusy] = useState(false);
+  const drawerScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -155,6 +157,7 @@ export function PackageDetail({
         aria-labelledby="package-detail-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        <div className="drawer-scroll" ref={drawerScrollRef}>
         <div className="drawer-toolbar">
           <button
             type="button"
@@ -348,7 +351,7 @@ export function PackageDetail({
           <div className="deps-block">
             <h3>Install plan</h3>
             {relLoading ? (
-              <p className="muted">Checking dependencies…</p>
+              <BeerMeter size="sm" label="Checking dependencies" />
             ) : installPlan ? (
               <>
                 <p className="deps-label">Will install</p>
@@ -374,7 +377,7 @@ export function PackageDetail({
           <div className="deps-block">
             <h3>Dependencies</h3>
             {relLoading ? (
-              <p className="muted">Loading…</p>
+              <BeerMeter size="sm" label="Loading" />
             ) : (
               <>
                 <p className="deps-label">Depends on</p>
@@ -443,6 +446,8 @@ export function PackageDetail({
             </div>
           </div>
         )}
+        </div>
+        <BeerScroll scrollerRef={drawerScrollRef} />
       </aside>
     </div>
   );
