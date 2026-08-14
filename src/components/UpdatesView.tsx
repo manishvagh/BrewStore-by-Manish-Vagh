@@ -4,6 +4,8 @@ import { PackageIcon } from "./PackageIcon";
 import { VerifiedName } from "./VerifiedName";
 import { formatAge } from "../lib/format";
 import { isOfficialCurrent } from "../lib/trust";
+import { BeerMeter } from "./BeerMeter";
+import { progressFor, type JobProgress } from "../lib/brewProgress";
 
 interface Props {
   packages: BrewPackage[];
@@ -18,6 +20,7 @@ interface Props {
   appUpdate: AppUpdateInfo | null;
   checkingAppUpdate: boolean;
   applyingAppUpdate?: boolean;
+  jobProgress?: JobProgress;
   onOpen: (pkg: BrewPackage) => void;
   onUpdate: (pkg: BrewPackage) => void;
   onUpdateAll: () => void;
@@ -38,6 +41,7 @@ export function UpdatesView({
   appUpdate,
   checkingAppUpdate,
   applyingAppUpdate,
+  jobProgress,
   onOpen,
   onUpdate,
   onUpdateAll,
@@ -88,10 +92,11 @@ export function UpdatesView({
           </div>
           <div className="update-source-action">
             {applyingAppUpdate ? (
-              <div className="update-progress" aria-live="polite">
-                <span className="progress-ring" />
-                <span>Installing</span>
-              </div>
+              <BeerMeter
+                size="sm"
+                label="Installing"
+                value={progressFor(jobProgress ?? null, "app-update")}
+              />
             ) : appUpdateAvailable && appUpdate ? (
               <button
                 type="button"
@@ -119,18 +124,26 @@ export function UpdatesView({
             </div>
           </div>
           <div className="update-source-action">
-            <button
-              type="button"
-              className="btn soft"
-              disabled={updatingBrew || allBusy || applyingAppUpdate}
-              onClick={onBrewUpdate}
-            >
-              {updatingBrew
-                ? brewUpdateQueued
-                  ? "Waiting…"
-                  : "Updating…"
-                : "Update Homebrew"}
-            </button>
+            {updatingBrew ? (
+              <BeerMeter
+                size="sm"
+                label={brewUpdateQueued ? "Waiting" : "Updating"}
+                value={
+                  brewUpdateQueued
+                    ? undefined
+                    : progressFor(jobProgress ?? null, "brew-update")
+                }
+              />
+            ) : (
+              <button
+                type="button"
+                className="btn soft"
+                disabled={allBusy || applyingAppUpdate}
+                onClick={onBrewUpdate}
+              >
+                Update Homebrew
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -144,23 +157,23 @@ export function UpdatesView({
               : `${pending.length} update${pending.length === 1 ? "" : "s"} available`}
           </p>
         </div>
-        {pending.length > 0 && (
-          <button
-            type="button"
-            className="btn primary"
-            disabled={allBusy || updatingIds.size > 0 || updatingBrew || applyingAppUpdate}
-            onClick={onUpdateAll}
-          >
-            {allBusy ? (
-              <span className="btn-progress">
-                <span className="mini-spinner" />
-                Updating All…
-              </span>
-            ) : (
-              "Update All"
-            )}
-          </button>
-        )}
+        {pending.length > 0 &&
+          (allBusy ? (
+            <BeerMeter
+              size="sm"
+              label="Updating all"
+              value={progressFor(jobProgress ?? null, "upgrade-all")}
+            />
+          ) : (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={updatingIds.size > 0 || updatingBrew || applyingAppUpdate}
+              onClick={onUpdateAll}
+            >
+              Update All
+            </button>
+          ))}
       </header>
 
       {pending.length === 0 ? (
@@ -203,10 +216,16 @@ export function UpdatesView({
 
                 <div className="update-row-action">
                   {isUpdating ? (
-                    <div className="update-progress" aria-live="polite">
-                      <span className="progress-ring" />
-                      <span>Updating</span>
-                    </div>
+                    <BeerMeter
+                      size="sm"
+                      label="Updating"
+                      value={progressFor(
+                        jobProgress ?? null,
+                        key,
+                        pkg.id,
+                        allBusy ? "upgrade-all" : undefined,
+                      )}
+                    />
                   ) : (
                     <button
                       type="button"

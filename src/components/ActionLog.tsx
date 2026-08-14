@@ -1,14 +1,17 @@
 import { useEffect, useRef } from "react";
 import type { ActivitySnapshot } from "../types";
+import { BeerMeter } from "./BeerMeter";
+import { progressFor, type JobProgress } from "../lib/brewProgress";
 
 interface Props {
   lines: string[];
   snapshot?: ActivitySnapshot | null;
+  jobProgress?: JobProgress;
   onClear: () => void;
   onRetry?: (id: string) => void;
 }
 
-export function ActionLog({ lines, snapshot, onClear, onRetry }: Props) {
+export function ActionLog({ lines, snapshot, jobProgress, onClear, onRetry }: Props) {
   const preRef = useRef<HTMLPreElement>(null);
   const current = snapshot?.current;
   const failed = (snapshot?.recent || [])
@@ -38,10 +41,21 @@ export function ActionLog({ lines, snapshot, onClear, onRetry }: Props) {
       ) : (
         <>
           {current && (
-            <p className="queue-current">
-              Running {current.action}
-              {current.pkgId ? ` · ${current.pkgId}` : ""}
-            </p>
+            <>
+              <p className="queue-current">
+                Running {current.action}
+                {current.pkgId ? ` · ${current.pkgId}` : ""}
+              </p>
+              <BeerMeter
+                size="sm"
+                label="Pouring"
+                value={progressFor(
+                  jobProgress ?? null,
+                  current.pkgId,
+                  current.action,
+                )}
+              />
+            </>
           )}
           <pre ref={preRef}>
             {lines.length === 0

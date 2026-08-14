@@ -6,6 +6,8 @@ import type {
   CleanupPreview,
   DoctorReport,
 } from "../types";
+import { BeerMeter } from "./BeerMeter";
+import type { JobProgress } from "../lib/brewProgress";
 
 type TabId = "taps" | "services" | "cleanup" | "doctor" | "bundle";
 
@@ -13,6 +15,7 @@ interface Props {
   api: Window["brewStore"];
   onLog: (line: string) => void;
   onRefreshInstalled: () => Promise<void>;
+  jobProgress?: JobProgress;
 }
 
 const TABS: { id: TabId; label: string }[] = [
@@ -59,7 +62,7 @@ function DiffList({
   );
 }
 
-export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
+export function MaintainView({ api, onLog, onRefreshInstalled, jobProgress }: Props) {
   const [tab, setTab] = useState<TabId>("taps");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +131,9 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
       <header className="page-header">
         <h1>Maintain</h1>
         <p>Taps, services, cleanup, doctor, and Brewfile tools</p>
+        {busy && (
+          <BeerMeter size="sm" label="Working" value={jobProgress?.percent} />
+        )}
       </header>
 
       <div className="maintain-tabs" role="tablist" aria-label="Maintain tools">

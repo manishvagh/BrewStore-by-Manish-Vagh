@@ -1,6 +1,7 @@
 import type { BrewPackage } from "../types";
 import { useVirtualGrid } from "../hooks/useVirtualGrid";
 import { PackageCard } from "./PackageCard";
+import { progressFor, type JobProgress } from "../lib/brewProgress";
 
 interface Props {
   packages: BrewPackage[];
@@ -10,6 +11,7 @@ interface Props {
   pinnedIds?: Set<string>;
   diskUsage?: Record<string, number>;
   resetKey?: string | number;
+  jobProgress?: JobProgress;
   onOpen: (pkg: BrewPackage) => void;
   onAction: (action: "install" | "uninstall" | "upgrade", pkg: BrewPackage) => void;
   onOpenApp?: (pkg: BrewPackage) => void;
@@ -28,6 +30,7 @@ export function PackageGrid({
   pinnedIds,
   diskUsage,
   resetKey,
+  jobProgress,
   onOpen,
   onAction,
   onOpenApp,
@@ -63,6 +66,7 @@ export function PackageGrid({
               queued={Boolean(queuedKeys?.has(key)) && !busy}
               pinned={pinnedIds?.has(pkg.id)}
               diskBytes={diskUsage?.[key]}
+              progress={progressFor(jobProgress ?? null, key, pkg.id)}
               onOpen={onOpen}
               onAction={onAction}
               onOpenApp={onOpenApp}

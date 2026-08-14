@@ -1,9 +1,11 @@
 import type { AppUpdateInfo } from "../types";
+import { BeerMeter } from "./BeerMeter";
 
 interface Props {
   update: AppUpdateInfo | null;
   checking: boolean;
   applying?: boolean;
+  progress?: number;
   onCheck: () => void;
   onDownload: (update: AppUpdateInfo) => void;
   onDismiss: () => void;
@@ -13,6 +15,7 @@ export function UpdateBanner({
   update,
   checking,
   applying,
+  progress,
   onCheck,
   onDownload,
   onDismiss,
@@ -39,14 +42,17 @@ export function UpdateBanner({
         <span className="muted"> (you have {update.currentVersion})</span>
       </div>
       <div className="update-banner-actions">
-        <button
-          type="button"
-          className="btn primary"
-          disabled={applying}
-          onClick={() => onDownload(update)}
-        >
-          {applying ? "Installing…" : canInstall ? "Install & relaunch" : "Download"}
-        </button>
+        {applying ? (
+          <BeerMeter size="sm" label="Installing" value={progress} />
+        ) : (
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => onDownload(update)}
+          >
+            {canInstall ? "Install & relaunch" : "Download"}
+          </button>
+        )}
         <button type="button" className="btn soft" disabled={applying} onClick={onDismiss}>
           Later
         </button>
