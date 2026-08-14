@@ -853,7 +853,22 @@ input {
 }
 
 .package-grid-virt {
+  --pkg-row-height: 8.5rem;
   min-height: 0;
+}
+
+.package-grid-virt .package-grid {
+  grid-auto-rows: var(--pkg-row-height);
+}
+
+.package-grid-virt .package-card {
+  height: 100%;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+.package-grid-virt .package-card:hover {
+  transform: none;
 }
 
 .package-card {
