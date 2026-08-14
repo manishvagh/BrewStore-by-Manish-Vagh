@@ -100,7 +100,7 @@ function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [brewVersion, setBrewVersion] = useState("Homebrew");
-  const [appVersion, setAppVersion] = useState("1.3.0");
+  const [appVersion, setAppVersion] = useState("1.3.1");
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [counts, setCounts] = useState({ casks: 0, formulae: 0, total: 0 });
   const [diskUsage, setDiskUsage] = useState<Record<string, number>>({});
@@ -431,6 +431,11 @@ function App() {
       return;
     }
 
+    if (action === "install" && pkg.disabled) {
+      setLog((prev) => [...prev.slice(-100), `✗ ${pkg.token} is disabled in Homebrew`]);
+      return;
+    }
+
     if (action === "install" && api.getInstallPlan) {
       try {
         const plan = await api.getInstallPlan(pkg);
@@ -594,13 +599,13 @@ function App() {
       const next = await api.brewUpdate();
       setFreshness(next);
       setLog((prev) => [...prev.slice(-100), "✓ Homebrew formulae updated"]);
-      await refreshStatus();
+      setUpdatingBrew(false);
+      void refreshStatus();
     } catch (err) {
       setLog((prev) => [
         ...prev.slice(-100),
         `✗ brew update failed: ${err instanceof Error ? err.message : String(err)}`,
       ]);
-    } finally {
       setUpdatingBrew(false);
     }
   }
@@ -835,10 +840,18 @@ function App() {
           updatingAll={updatingAll}
           freshness={freshness}
           updatingBrew={updatingBrew}
+          brewUpdateQueued={
+            updatingBrew && activity?.current?.action !== "brew-update"
+          }
+          appVersion={appVersion}
+          appUpdate={appUpdate}
+          checkingAppUpdate={checkingUpdate}
+          applyingAppUpdate={applyingUpdate}
           onOpen={openPackage}
           onUpdate={(pkg) => void runAction("upgrade", pkg)}
           onUpdateAll={() => void upgradeAll()}
           onBrewUpdate={() => void runBrewUpdate()}
+          onApplyAppUpdate={(update) => void applyAppUpdate(update)}
         />
       );
     }

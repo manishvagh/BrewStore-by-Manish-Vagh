@@ -68,6 +68,8 @@ function brewEnv(overrides = {}) {
     HOMEBREW_NO_ENV_HINTS: "1",
     HOMEBREW_COLOR: "0",
     HOMEBREW_NO_ANALYTICS: "1",
+    GIT_TERMINAL_PROMPT: "0",
+    GIT_ASKPASS: "/usr/bin/true",
     ...overrides,
   };
 }
@@ -242,7 +244,7 @@ async function installHomebrew(onData) {
   return homebrewInstallInFlight;
 }
 
-function runBrew(brewPath, args, { onData, allowFail = false, extraEnv = {} } = {}) {
+function runBrew(brewPath, args, { onData, allowFail = false, extraEnv = {}, timeoutMs = 0 } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(brewPath, args, {
       env: brewEnv(extraEnv),
@@ -250,30 +252,72 @@ function runBrew(brewPath, args, { onData, allowFail = false, extraEnv = {} } = 
 
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    let lastOutput = Date.now();
+
+    const finish = (fn) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(killTimer);
+      clearInterval(heartbeat);
+      fn();
+    };
+
+    const heartbeat = setInterval(() => {
+      if (Date.now() - lastOutput < 15000) return;
+      onData?.("… still working\n");
+    }, 15000);
+
+    const killTimer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            try {
+              child.kill("SIGTERM");
+            } catch {
+              // already exited
+            }
+            setTimeout(() => {
+              try {
+                child.kill("SIGKILL");
+              } catch {
+                // already exited
+              }
+            }, 4000);
+            const err = new Error(
+              `brew ${args[0] || "command"} timed out after ${Math.round(timeoutMs / 1000)}s`,
+            );
+            err.code = "TIMEOUT";
+            finish(() => reject(err));
+          }, timeoutMs)
+        : null;
 
     child.stdout.on("data", (chunk) => {
       const text = chunk.toString();
       stdout += text;
+      lastOutput = Date.now();
       onData?.(text, "stdout");
     });
     child.stderr.on("data", (chunk) => {
       const text = chunk.toString();
       stderr += text;
+      lastOutput = Date.now();
       onData?.(text, "stderr");
     });
-    child.on("error", reject);
+    child.on("error", (err) => finish(() => reject(err)));
     child.on("close", (code) => {
-      if (code === 0 || allowFail) {
-        resolve({ stdout, stderr, code: code ?? 0 });
-        return;
-      }
-      const err = new Error(
-        stderr.trim() || stdout.trim() || `brew exited ${code}`,
-      );
-      err.code = code;
-      err.stdout = stdout;
-      err.stderr = stderr;
-      reject(err);
+      finish(() => {
+        if (code === 0 || allowFail) {
+          resolve({ stdout, stderr, code: code ?? 0 });
+          return;
+        }
+        const err = new Error(
+          stderr.trim() || stdout.trim() || `brew exited ${code}`,
+        );
+        err.code = code;
+        err.stdout = stdout;
+        err.stderr = stderr;
+        reject(err);
+      });
     });
   });
 }
@@ -331,8 +375,16 @@ function extractAppNames(cask) {
   return [...names];
 }
 
+function officialTap(tap, type) {
+  const value = String(tap || "").toLowerCase();
+  if (!value) return true;
+  if (type === "cask") return value === "homebrew/cask" || value.startsWith("homebrew/cask");
+  return value === "homebrew/core" || value.startsWith("homebrew/");
+}
+
 function normalizeCask(cask) {
   const name = Array.isArray(cask.name) ? cask.name[0] : cask.name || cask.token;
+  const tap = cask.tap || "homebrew/cask";
   return {
     id: cask.token,
     token: cask.token,
@@ -340,7 +392,7 @@ function normalizeCask(cask) {
     desc: cask.desc || "",
     homepage: cask.homepage || "",
     version: cask.version || "",
-    tap: cask.tap || "homebrew/cask",
+    tap,
     type: "cask",
     license: null,
     appNames: extractAppNames(cask),
@@ -350,10 +402,14 @@ function normalizeCask(cask) {
     },
     outdated: Boolean(cask.outdated),
     installed: Boolean(cask.installed),
+    official: officialTap(tap, "cask"),
+    deprecated: Boolean(cask.deprecated),
+    disabled: Boolean(cask.disabled),
   };
 }
 
 function normalizeFormula(formula) {
+  const tap = formula.tap || "homebrew/core";
   return {
     id: formula.name,
     token: formula.name,
@@ -361,7 +417,7 @@ function normalizeFormula(formula) {
     desc: formula.desc || "",
     homepage: formula.homepage || "",
     version: formula.versions?.stable || formula.version || "",
-    tap: formula.tap || "homebrew/core",
+    tap,
     type: "formula",
     license: formula.license || null,
     appNames: [],
@@ -371,6 +427,9 @@ function normalizeFormula(formula) {
     },
     outdated: Boolean(formula.outdated),
     installed: Boolean(formula.installed?.length),
+    official: officialTap(tap, "formula"),
+    deprecated: Boolean(formula.deprecated),
+    disabled: Boolean(formula.disabled),
   };
 }
 
@@ -392,7 +451,7 @@ async function writeCache(cachePath, data) {
 }
 
 async function loadCatalog(userDataPath, { force = false } = {}) {
-  const cachePath = path.join(userDataPath, "catalog-cache-v2.json");
+  const cachePath = path.join(userDataPath, "catalog-cache-v3.json");
   if (!force) {
     const cached = await readCache(cachePath);
     if (cached) return cached;
@@ -568,33 +627,110 @@ async function reinstallPackage(brewPath, { id, type }, onData) {
   return runBrew(brewPath, args, { onData });
 }
 
-async function brewUpdate(brewPath, onData) {
-  return runBrew(brewPath, ["update"], {
-    onData,
-    extraEnv: { HOMEBREW_NO_AUTO_UPDATE: "0" },
-  });
+const FRESHNESS_STALE_MS = 1000 * 60 * 60 * 12;
+
+async function markBrewUpdated(userDataPath) {
+  const updatedAt = Date.now();
+  if (!userDataPath) return updatedAt;
+  try {
+    await fs.mkdir(userDataPath, { recursive: true });
+    await fs.writeFile(
+      path.join(userDataPath, "brew-freshness.json"),
+      JSON.stringify({ updatedAt }),
+    );
+  } catch {
+    // still treat this run as fresh
+  }
+  return updatedAt;
 }
 
-async function getFreshness(brewPath) {
+async function readMarkedUpdate(userDataPath) {
+  if (!userDataPath) return null;
   try {
-    const { stdout } = await runBrew(brewPath, ["--repository"], { allowFail: true });
+    const raw = await fs.readFile(path.join(userDataPath, "brew-freshness.json"), "utf8");
+    const updatedAt = Number(JSON.parse(raw)?.updatedAt);
+    return Number.isFinite(updatedAt) ? updatedAt : null;
+  } catch {
+    return null;
+  }
+}
+
+async function newestApiCacheMtime(brewPath) {
+  try {
+    const { stdout } = await runBrew(brewPath, ["--cache"], { allowFail: true, timeoutMs: 8000 });
+    const root = path.join(String(stdout || "").trim(), "api");
+    if (!root || root === "api") return null;
+    const names = await fs.readdir(root, { withFileTypes: true });
+    let newest = 0;
+    for (const ent of names) {
+      const full = path.join(root, ent.name);
+      try {
+        const st = await fs.stat(full);
+        if (st.mtimeMs > newest) newest = st.mtimeMs;
+      } catch {
+        // skip
+      }
+      if (ent.isDirectory()) {
+        const nested = await fs.readdir(full).catch(() => []);
+        for (const child of nested) {
+          try {
+            const st = await fs.stat(path.join(full, child));
+            if (st.mtimeMs > newest) newest = st.mtimeMs;
+          } catch {
+            // skip
+          }
+        }
+      }
+    }
+    return newest || null;
+  } catch {
+    return null;
+  }
+}
+
+async function brewGitCommitTime(brewPath) {
+  try {
+    const { stdout } = await runBrew(brewPath, ["--repository"], { allowFail: true, timeoutMs: 8000 });
     const repo = String(stdout || "").trim();
-    if (!repo) return { updatedAt: null, stale: true };
+    if (!repo) return null;
     const { stdout: ts } = await execFileAsync(
       "/usr/bin/git",
       ["-C", repo, "log", "-1", "--format=%ct"],
       { timeout: 8000 },
     );
     const updatedAt = Number(String(ts).trim()) * 1000;
-    const ageMs = Date.now() - updatedAt;
-    return {
-      updatedAt: Number.isFinite(updatedAt) ? updatedAt : null,
-      ageMs: Number.isFinite(ageMs) ? ageMs : null,
-      stale: !Number.isFinite(ageMs) || ageMs > 1000 * 60 * 60 * 12,
-    };
+    return Number.isFinite(updatedAt) ? updatedAt : null;
   } catch {
-    return { updatedAt: null, stale: true, ageMs: null };
+    return null;
   }
+}
+
+async function brewUpdate(brewPath, onData, userDataPath) {
+  onData?.("Fetching Homebrew taps (this can take a few minutes)…\n");
+  const result = await runBrew(brewPath, ["update"], {
+    onData,
+    timeoutMs: 8 * 60 * 1000,
+  });
+  await markBrewUpdated(userDataPath);
+  return result;
+}
+
+async function getFreshness(brewPath, userDataPath) {
+  const times = (
+    await Promise.all([
+      readMarkedUpdate(userDataPath),
+      newestApiCacheMtime(brewPath),
+      brewGitCommitTime(brewPath),
+    ])
+  ).filter((value) => Number.isFinite(value));
+  if (!times.length) return { updatedAt: null, stale: true, ageMs: null };
+  const updatedAt = Math.max(...times);
+  const ageMs = Date.now() - updatedAt;
+  return {
+    updatedAt,
+    ageMs,
+    stale: ageMs > FRESHNESS_STALE_MS,
+  };
 }
 
 function splitNames(stdout) {

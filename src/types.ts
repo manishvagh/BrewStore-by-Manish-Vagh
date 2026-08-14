@@ -20,6 +20,9 @@ export interface BrewPackage {
   outdated?: boolean;
   installed?: boolean;
   category?: string;
+  official?: boolean;
+  deprecated?: boolean;
+  disabled?: boolean;
 }
 
 export interface CatalogPayload {

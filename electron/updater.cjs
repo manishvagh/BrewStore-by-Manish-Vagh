@@ -13,7 +13,7 @@ function download(url, dest, onData) {
     const req = https.get(
       url,
       {
-        headers: { "User-Agent": "BrewStore/1.3.0", Accept: "*/*" },
+        headers: { "User-Agent": "BrewStore/1.3.1", Accept: "*/*" },
       },
       (res) => {
         if (
