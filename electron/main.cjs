@@ -340,9 +340,9 @@ ipcMain.handle("app:apply-update", async (_event, info) => {
       });
     },
   });
-  setTimeout(() => {
+  setImmediate(() => {
     app.quit();
-  }, 400);
+  });
   return { ok: true };
 });
 
