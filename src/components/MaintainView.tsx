@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
+  BrewfileDiff,
   BrewService,
   BrewTap,
   CleanupPreview,
@@ -34,6 +35,30 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+function DiffList({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{ id?: string; name?: string; type?: string; present?: boolean }>;
+}) {
+  if (!rows.length) return null;
+  return (
+    <div className="brewfile-diff-block">
+      <p className="deps-label">{title}</p>
+      <ul className="brewfile-diff">
+        {rows.map((row) => (
+          <li key={`${row.type || "tap"}:${row.id || row.name}`}>
+            {row.id || row.name}
+            {row.type ? ` (${row.type})` : ""}
+            {row.present === false ? " — missing tap" : ""}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
   const [tab, setTab] = useState<TabId>("taps");
   const [busy, setBusy] = useState(false);
@@ -43,8 +68,12 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
   const [tapInput, setTapInput] = useState("");
   const [services, setServices] = useState<BrewService[]>([]);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null);
+  const [leaves, setLeaves] = useState<string[]>([]);
+  const [orphans, setOrphans] = useState<string[]>([]);
   const [doctorReport, setDoctorReport] = useState<DoctorReport | null>(null);
   const [bundleMessage, setBundleMessage] = useState<string | null>(null);
+  const [bundleDiff, setBundleDiff] = useState<BrewfileDiff | null>(null);
+  const [bundlePath, setBundlePath] = useState<string | null>(null);
 
   const run = useCallback(
     async (label: string, fn: () => Promise<void>) => {
@@ -83,6 +112,16 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
       }
     })();
   }, [tab, loadTaps, loadServices]);
+
+  useEffect(() => {
+    if (tab !== "services") return;
+    const timer = window.setInterval(() => {
+      void loadServices().catch(() => {});
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [tab, loadServices]);
+
+  const failedServices = services.filter((s) => /error|unknown/i.test(s.status));
 
   return (
     <section className="page maintain">
@@ -179,13 +218,32 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
             >
               Refresh
             </button>
+            {failedServices.length > 0 && (
+              <button
+                type="button"
+                className="btn primary"
+                disabled={busy}
+                onClick={() =>
+                  void run("Restart failed services", async () => {
+                    setServices(
+                      await api.serviceAction({
+                        name: failedServices[0]!.name,
+                        action: "restart-failed",
+                      }),
+                    );
+                  })
+                }
+              >
+                Restart failed
+              </button>
+            )}
           </div>
           <ul className="maintain-list">
             {services.map((service) => (
               <li key={service.name}>
                 <div>
                   <strong>{service.name}</strong>
-                  <span className="tag">{service.status}</span>
+                  <span className={`tag service-${service.status}`}>{service.status}</span>
                   {service.user && <span className="muted"> · {service.user}</span>}
                 </div>
                 <div className="maintain-inline-actions">
@@ -206,6 +264,21 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
                       {action}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    className="btn soft"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(`Open log ${service.name}`, async () => {
+                        const result = await api.openServiceLog(service.name);
+                        if (!result.ok) {
+                          throw new Error(result.error || "Could not open service log");
+                        }
+                      })
+                    }
+                  >
+                    Log
+                  </button>
                 </div>
               </li>
             ))}
@@ -220,6 +293,7 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
         <div className="maintain-panel glass-card">
           <p className="maintain-lead">
             Preview reclaimable Homebrew cache and old kegs, then clean up.
+            Leaves are formulae you installed on purpose; orphans can be removed.
           </p>
           <div className="maintain-actions">
             <button
@@ -232,7 +306,7 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
                 })
               }
             >
-              Scan
+              Scan cache
             </button>
             <button
               type="button"
@@ -247,6 +321,45 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
               }}
             >
               Clean up
+            </button>
+            <button
+              type="button"
+              className="btn soft"
+              disabled={busy}
+              onClick={() =>
+                void run("List leaves & orphans", async () => {
+                  const [nextLeaves, dry] = await Promise.all([
+                    api.listLeaves(),
+                    api.autoremoveDryRun(),
+                  ]);
+                  setLeaves(nextLeaves);
+                  setOrphans(dry.packages);
+                })
+              }
+            >
+              Find orphans
+            </button>
+            <button
+              type="button"
+              className="btn danger"
+              disabled={busy || orphans.length === 0}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Remove unused dependencies?\n\n${orphans.slice(0, 20).join(", ")}`,
+                  )
+                ) {
+                  return;
+                }
+                void run("brew autoremove", async () => {
+                  await api.autoremove();
+                  setOrphans([]);
+                  setLeaves(await api.listLeaves());
+                  await onRefreshInstalled();
+                });
+              }}
+            >
+              Autoremove
             </button>
           </div>
           {cleanupPreview && (
@@ -266,6 +379,18 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
                       .join("\n")
                   : cleanupPreview.raw || "Nothing to clean."}
               </pre>
+            </div>
+          )}
+          {leaves.length > 0 && (
+            <div className="cleanup-summary">
+              <p className="deps-label">Leaves ({leaves.length})</p>
+              <p className="deps-values">{leaves.join(", ")}</p>
+            </div>
+          )}
+          {orphans.length > 0 && (
+            <div className="cleanup-summary">
+              <p className="deps-label">Unused dependencies ({orphans.length})</p>
+              <p className="deps-values">{orphans.join(", ")}</p>
             </div>
           )}
         </div>
@@ -306,8 +431,8 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
       {tab === "bundle" && (
         <div className="maintain-panel glass-card">
           <p className="maintain-lead">
-            Export your installed set as a Brewfile, or import one to set up
-            another Mac.
+            Export your installed set as a Brewfile, preview a file against this
+            Mac, then import to install the missing packages.
           </p>
           <div className="maintain-actions">
             <button
@@ -331,10 +456,35 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
               type="button"
               className="btn soft"
               disabled={busy}
+              onClick={() =>
+                void run("Preview Brewfile", async () => {
+                  const result = await api.bundlePreview();
+                  if (result.canceled) {
+                    setBundleMessage("Preview canceled.");
+                    setBundleDiff(null);
+                    return;
+                  }
+                  setBundlePath(result.path || null);
+                  setBundleDiff(result.diff || null);
+                  setBundleMessage(
+                    result.path ? `Compared ${result.path}` : "Brewfile compared.",
+                  );
+                })
+              }
+            >
+              Preview Brewfile
+            </button>
+            <button
+              type="button"
+              className="btn soft"
+              disabled={busy}
               onClick={() => {
+                const extra = bundleDiff
+                  ? `\n\nWill install ${bundleDiff.missing.length} missing package(s).`
+                  : "";
                 if (
                   !window.confirm(
-                    "Import and install packages from a Brewfile? This may take a while.",
+                    `Import and install packages from a Brewfile? This may take a while.${extra}`,
                   )
                 ) {
                   return;
@@ -346,6 +496,7 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
                     return;
                   }
                   setBundleMessage(`Installed from ${result.path}`);
+                  setBundleDiff(null);
                   await onRefreshInstalled();
                 });
               }}
@@ -354,6 +505,15 @@ export function MaintainView({ api, onLog, onRefreshInstalled }: Props) {
             </button>
           </div>
           {bundleMessage && <p className="muted">{bundleMessage}</p>}
+          {bundleDiff && (
+            <div className="brewfile-diff-panel">
+              {bundlePath && <p className="muted">{bundlePath}</p>}
+              <DiffList title="Missing taps" rows={bundleDiff.taps.filter((t) => !t.present)} />
+              <DiffList title="Not installed yet" rows={bundleDiff.missing} />
+              <DiffList title="On this Mac, not in Brewfile" rows={bundleDiff.extra} />
+              <DiffList title="Already matches" rows={bundleDiff.keep.slice(0, 40)} />
+            </div>
+          )}
         </div>
       )}
     </section>

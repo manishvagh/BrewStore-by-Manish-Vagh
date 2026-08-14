@@ -242,10 +242,10 @@ async function installHomebrew(onData) {
   return homebrewInstallInFlight;
 }
 
-function runBrew(brewPath, args, { onData, allowFail = false } = {}) {
+function runBrew(brewPath, args, { onData, allowFail = false, extraEnv = {} } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(brewPath, args, {
-      env: brewEnv(),
+      env: brewEnv(extraEnv),
     });
 
     let stdout = "";
@@ -544,9 +544,13 @@ async function installPackage(brewPath, { id, type }, onData) {
   return runBrew(brewPath, args, { onData });
 }
 
-async function uninstallPackage(brewPath, { id, type }, onData) {
+async function uninstallPackage(brewPath, { id, type, zap = false }, onData) {
   const args =
-    type === "cask" ? ["uninstall", "--cask", id] : ["uninstall", id];
+    type === "cask"
+      ? zap
+        ? ["uninstall", "--cask", "--zap", id]
+        : ["uninstall", "--cask", id]
+      : ["uninstall", id];
   return runBrew(brewPath, args, { onData });
 }
 
@@ -557,6 +561,174 @@ async function upgradePackage(brewPath, { id, type }, onData) {
 
 async function upgradeAll(brewPath, onData) {
   return runBrew(brewPath, ["upgrade"], { onData });
+}
+
+async function reinstallPackage(brewPath, { id, type }, onData) {
+  const args = type === "cask" ? ["reinstall", "--cask", id] : ["reinstall", id];
+  return runBrew(brewPath, args, { onData });
+}
+
+async function brewUpdate(brewPath, onData) {
+  return runBrew(brewPath, ["update"], {
+    onData,
+    extraEnv: { HOMEBREW_NO_AUTO_UPDATE: "0" },
+  });
+}
+
+async function getFreshness(brewPath) {
+  try {
+    const { stdout } = await runBrew(brewPath, ["--repository"], { allowFail: true });
+    const repo = String(stdout || "").trim();
+    if (!repo) return { updatedAt: null, stale: true };
+    const { stdout: ts } = await execFileAsync(
+      "/usr/bin/git",
+      ["-C", repo, "log", "-1", "--format=%ct"],
+      { timeout: 8000 },
+    );
+    const updatedAt = Number(String(ts).trim()) * 1000;
+    const ageMs = Date.now() - updatedAt;
+    return {
+      updatedAt: Number.isFinite(updatedAt) ? updatedAt : null,
+      ageMs: Number.isFinite(ageMs) ? ageMs : null,
+      stale: !Number.isFinite(ageMs) || ageMs > 1000 * 60 * 60 * 12,
+    };
+  } catch {
+    return { updatedAt: null, stale: true, ageMs: null };
+  }
+}
+
+function splitNames(stdout) {
+  return String(stdout || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+async function getInstallPlan(brewPath, { id, type }, installedMap = {}) {
+  const deps = await getDeps(brewPath, { id, type });
+  const missing = [];
+  const already = [];
+  for (const dep of deps) {
+    const asFormula = installedMap[`formula:${dep}`];
+    const asCask = installedMap[`cask:${dep}`];
+    if (asFormula || asCask) already.push(dep);
+    else missing.push(dep);
+  }
+  const targetKey = `${type}:${id}`;
+  const targetInstalled = Boolean(installedMap[targetKey]);
+  return {
+    id,
+    type,
+    deps,
+    missing,
+    already,
+    targetInstalled,
+    steps: targetInstalled ? missing : [...missing, id],
+  };
+}
+
+async function getUninstallPlan(brewPath, { id, type }) {
+  const dependents = await getDependents(brewPath, { id, type });
+  return { id, type, dependents };
+}
+
+async function zapDryRun(brewPath, { id, type }, onData) {
+  if (type !== "cask") {
+    return { ok: false, error: "Zap is only available for casks", raw: "", items: [] };
+  }
+  const { stdout, stderr } = await runBrew(
+    brewPath,
+    ["uninstall", "--cask", "--zap", "--dry-run", id],
+    { onData, allowFail: true },
+  );
+  const raw = `${stdout}\n${stderr}`.trim();
+  const items = raw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !/^==>/.test(l));
+  return { ok: true, raw, items };
+}
+
+async function listLeaves(brewPath) {
+  try {
+    const { stdout } = await runBrew(brewPath, ["leaves"], { allowFail: true });
+    return splitNames(stdout);
+  } catch {
+    return [];
+  }
+}
+
+async function autoremoveDryRun(brewPath, onData) {
+  const { stdout, stderr } = await runBrew(brewPath, ["autoremove", "-n"], {
+    onData,
+    allowFail: true,
+  });
+  const raw = `${stdout}\n${stderr}`.trim();
+  const packages = splitNames(stdout).filter((l) => !/^==>|Would/.test(l));
+  return { raw, packages };
+}
+
+async function autoremove(brewPath, onData) {
+  await runBrew(brewPath, ["autoremove"], { onData });
+  return { ok: true };
+}
+
+function parseBrewfile(text) {
+  const taps = [];
+  const formulae = [];
+  const casks = [];
+  for (const raw of String(text || "").split("\n")) {
+    const line = raw.replace(/#.*$/, "").trim();
+    if (!line) continue;
+    const tap = line.match(/^tap\s+"([^"]+)"/);
+    const brew = line.match(/^brew\s+"([^"]+)"/);
+    const cask = line.match(/^cask\s+"([^"]+)"/);
+    if (tap) taps.push(tap[1]);
+    else if (brew) formulae.push(brew[1].split("/").pop());
+    else if (cask) casks.push(cask[1].split("/").pop());
+  }
+  return { taps, formulae, casks };
+}
+
+function diffBrewfile(parsed, installedMap, tapNames = []) {
+  const tapSet = new Set(tapNames);
+  const missing = [];
+  const extra = [];
+  const keep = [];
+  for (const name of parsed.formulae) {
+    const row = { id: name, type: "formula" };
+    if (installedMap[`formula:${name}`]) keep.push(row);
+    else missing.push(row);
+  }
+  for (const name of parsed.casks) {
+    const row = { id: name, type: "cask" };
+    if (installedMap[`cask:${name}`]) keep.push(row);
+    else missing.push(row);
+  }
+  const wanted = new Set([
+    ...parsed.formulae.map((n) => `formula:${n}`),
+    ...parsed.casks.map((n) => `cask:${n}`),
+  ]);
+  for (const key of Object.keys(installedMap || {})) {
+    if (!wanted.has(key)) {
+      const [type, id] = key.split(":");
+      extra.push({ id, type });
+    }
+  }
+  return {
+    taps: parsed.taps.map((name) => ({
+      name,
+      present: tapSet.has(name),
+    })),
+    missing,
+    extra,
+    keep,
+  };
+}
+
+async function readBrewfile(filePath) {
+  const text = await fs.readFile(filePath, "utf8");
+  return parseBrewfile(text);
 }
 
 const PROTECTED_TAPS = new Set(["homebrew/core", "homebrew/cask"]);
@@ -977,17 +1149,25 @@ async function checkAppUpdate(currentVersion) {
   const latest = String(data.tag_name || data.name || "").replace(/^v/i, "");
   const current = String(currentVersion || "0.0.0").replace(/^v/i, "");
   const assets = Array.isArray(data.assets) ? data.assets : [];
-  const dmg =
-    assets.find((a) => /\.dmg$/i.test(a.name || "")) ||
-    assets.find((a) => /arm64.*\.dmg/i.test(a.name || "")) ||
+  const zip =
+    assets.find((a) => /arm64.*\.zip$/i.test(a.name || "")) ||
+    assets.find((a) => /\.zip$/i.test(a.name || "")) ||
     null;
+  const dmg =
+    assets.find((a) => /arm64.*\.dmg$/i.test(a.name || "")) ||
+    assets.find((a) => /\.dmg$/i.test(a.name || "")) ||
+    null;
+  const checksumAsset = assets.find((a) => /sha256|checksums/i.test(a.name || ""));
 
   return {
     updateAvailable: Boolean(latest) && compareSemver(latest, current) > 0,
     currentVersion: current,
     latestVersion: latest || current,
     releaseUrl: data.html_url || "https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest",
-    downloadUrl: dmg?.browser_download_url || null,
+    downloadUrl: zip?.browser_download_url || dmg?.browser_download_url || null,
+    zipUrl: zip?.browser_download_url || null,
+    dmgUrl: dmg?.browser_download_url || null,
+    checksumUrl: checksumAsset?.browser_download_url || null,
     notes: typeof data.body === "string" ? data.body.slice(0, 2000) : "",
     publishedAt: data.published_at || null,
   };
@@ -1008,6 +1188,18 @@ module.exports = {
   uninstallPackage,
   upgradePackage,
   upgradeAll,
+  reinstallPackage,
+  brewUpdate,
+  getFreshness,
+  getInstallPlan,
+  getUninstallPlan,
+  zapDryRun,
+  listLeaves,
+  autoremoveDryRun,
+  autoremove,
+  parseBrewfile,
+  diffBrewfile,
+  readBrewfile,
   listTaps,
   addTap,
   removeTap,

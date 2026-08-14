@@ -223,7 +223,7 @@ async function resolveOne(userData, pkg) {
 
 async function resolveIcons(userData, packages) {
   const result = {};
-  const list = Array.isArray(packages) ? packages.slice(0, 24) : [];
+  const list = Array.isArray(packages) ? packages.slice(0, 80) : [];
   const queue = [...list];
   const workers = Array.from(
     { length: Math.min(4, queue.length || 1) },

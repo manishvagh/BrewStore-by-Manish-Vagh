@@ -9,6 +9,7 @@ interface Props {
   counts: { casks: number; formulae: number; total: number };
   appUpdate: AppUpdateInfo | null;
   checkingUpdate: boolean;
+  applyingUpdate?: boolean;
   onCheckUpdate: () => void;
   onDownloadUpdate: (update: AppUpdateInfo) => void;
   onDismissUpdate: () => void;
@@ -26,6 +27,7 @@ export function CreditsView({
   counts,
   appUpdate,
   checkingUpdate,
+  applyingUpdate,
   onCheckUpdate,
   onDownloadUpdate,
   onDismissUpdate,
@@ -49,6 +51,7 @@ export function CreditsView({
         <UpdateBanner
           update={appUpdate}
           checking={checkingUpdate}
+          applying={applyingUpdate}
           onCheck={onCheckUpdate}
           onDownload={onDownloadUpdate}
           onDismiss={onDismissUpdate}

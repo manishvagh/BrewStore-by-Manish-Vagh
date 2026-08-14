@@ -16,6 +16,19 @@ contextBridge.exposeInMainWorld("brewStore", {
   uninstall: (pkg) => ipcRenderer.invoke("brew:uninstall", pkg),
   upgrade: (pkg) => ipcRenderer.invoke("brew:upgrade", pkg),
   upgradeAll: () => ipcRenderer.invoke("brew:upgrade-all"),
+  reinstall: (pkg) => ipcRenderer.invoke("brew:reinstall", pkg),
+  zap: (pkg) => ipcRenderer.invoke("brew:zap", pkg),
+  zapDryRun: (pkg) => ipcRenderer.invoke("brew:zap-dry-run", pkg),
+  brewUpdate: () => ipcRenderer.invoke("brew:update"),
+  getFreshness: () => ipcRenderer.invoke("brew:freshness"),
+  getInstallPlan: (pkg) => ipcRenderer.invoke("brew:install-plan", pkg),
+  getUninstallPlan: (pkg) => ipcRenderer.invoke("brew:uninstall-plan", pkg),
+  listLeaves: () => ipcRenderer.invoke("brew:leaves"),
+  autoremoveDryRun: () => ipcRenderer.invoke("brew:autoremove-dry-run"),
+  autoremove: () => ipcRenderer.invoke("brew:autoremove"),
+  getActivity: () => ipcRenderer.invoke("brew:activity"),
+  retryActivity: (id) => ipcRenderer.invoke("brew:retry", id),
+  applyAppUpdate: (info) => ipcRenderer.invoke("app:apply-update", info),
   getDiskUsage: (packages) => ipcRenderer.invoke("brew:disk-usage", packages),
   listTaps: () => ipcRenderer.invoke("brew:taps"),
   addTap: (name) => ipcRenderer.invoke("brew:tap-add", name),
@@ -32,6 +45,8 @@ contextBridge.exposeInMainWorld("brewStore", {
   getDependents: (pkg) => ipcRenderer.invoke("brew:dependents", pkg),
   bundleExport: () => ipcRenderer.invoke("brew:bundle-export"),
   bundleImport: () => ipcRenderer.invoke("brew:bundle-import"),
+  bundlePreview: () => ipcRenderer.invoke("brew:bundle-preview"),
+  openServiceLog: (name) => ipcRenderer.invoke("brew:service-log", name),
   openExternal: (url) => ipcRenderer.invoke("shell:open-external", url),
   openInstalledApp: (pkg) => ipcRenderer.invoke("shell:open-app", pkg),
   resolveIcons: (packages) => ipcRenderer.invoke("icons:resolve", packages),
@@ -40,5 +55,10 @@ contextBridge.exposeInMainWorld("brewStore", {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on("brew:progress", listener);
     return () => ipcRenderer.removeListener("brew:progress", listener);
+  },
+  onQueue: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on("brew:queue", listener);
+    return () => ipcRenderer.removeListener("brew:queue", listener);
   },
 });
