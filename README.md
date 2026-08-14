@@ -15,6 +15,14 @@ BrewStore is a frontend for Homebrew. It does not replace Homebrew, and it does 
 
 **Website:** [brewstore.app](https://brewstore.app/)
 
+**Homebrew (Apple Silicon):**
+
+```bash
+brew install --cask manishvagh/brewstore/brewstore
+```
+
+That taps [manishvagh/homebrew-brewstore](https://github.com/manishvagh/homebrew-brewstore) and trusts only this cask. Official Homebrew Cask does not accept unsigned apps.
+
 **Latest release:**  
 [Download the DMG](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest) or the [`.app` zip](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest).
 
@@ -151,13 +159,21 @@ This starts the Vite dev server and opens the Electron window. Use this while ha
 
 ## Install as a macOS app
 
-### Option A — Download the DMG (recommended)
+### Option A — Homebrew (recommended, Apple Silicon)
+
+```bash
+brew install --cask manishvagh/brewstore/brewstore
+```
+
+Upgrade later with `brew update && brew upgrade --cask brewstore`, or from **Updates** in the app.
+
+### Option B — Download the DMG
 
 1. Get the latest build from [GitHub Releases](https://github.com/manishvagh/BrewStore-by-Manish-Vagh/releases/latest)
 2. Open the `.dmg`, drag **BrewStore** into **Applications**
 3. Launch from Launchpad, Spotlight, or Applications
 
-### Option B — Build from source
+### Option C — Build from source
 
 Build a packaged `.app`, install it into `/Applications`, and ensure Homebrew is present (installs Homebrew during this step if needed — macOS may ask for your password):
 
