@@ -855,6 +855,7 @@ input {
 .package-grid-virt {
   --pkg-row-height: 8.5rem;
   min-height: 0;
+  box-sizing: content-box;
 }
 
 .package-grid-virt .package-grid {
